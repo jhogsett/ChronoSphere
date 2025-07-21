@@ -39,6 +39,10 @@ public:
   DisplayMode getCurrentMode();
   bool isTimeToUpdate();
   
+  // Display methods
+  void displayTimeOnly(DateTime time);
+  void displayDateOnly(DateTime time);
+  
   // Brightness control
   void setBrightness(uint8_t brightness);
   void adjustBrightnessForAmbientLight(float lightLevel);

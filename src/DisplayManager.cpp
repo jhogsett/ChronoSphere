@@ -116,6 +116,38 @@ void DisplayManager::displayTime(DateTime time) {
   displayString(displayText);
 }
 
+void DisplayManager::displayTimeOnly(DateTime time) {
+  char displayText[13];
+  
+  // Format time: "  HH MM SS  " - center-justified with colors
+  // GREEN: HH, AMBER: MM, RED: SS
+  int hour = time.hour();
+  if (hour == 0) hour = 12;
+  if (hour > 12) hour -= 12;
+  
+  // Create 12-character string: "  HH MM SS  "
+  //                            0123456789AB
+  sprintf(displayText, "  %2d %02d %02d  ", hour, time.minute(), time.second());
+  
+  displayString(displayText);
+}
+
+void DisplayManager::displayDateOnly(DateTime time) {
+  char displayText[13];
+  
+  // Format date: "  MM DD YYYY" - using all three colors
+  // GREEN: MM, AMBER: DD, RED: YYYY
+  int month = time.month();
+  int day = time.day();
+  int year = time.year();
+  
+  // Create 12-character string: "  MM DD YYYY"
+  //                            0123456789AB
+  sprintf(displayText, "  %2d %02d %4d", month, day, year);
+  
+  displayString(displayText);
+}
+
 void DisplayManager::formatTime(DateTime time, char* buffer) {
   int hour = time.hour();
   if (hour == 0) hour = 12;

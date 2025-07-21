@@ -149,42 +149,41 @@ void testDisplay() {
   }
   
   // Test displays using the actual API
-  Serial.println(F("\nTesting displays with clock mode..."));
-  Serial.println(F("Look for time display split across Green/Amber/Red displays"));
+  Serial.println(F("\nTesting phase 2/5: Clock mode (time + date on all displays)"));
+  Serial.println(F("Look for time in GREEN, month in AMBER, day in RED"));
   testDisplayManager.setMode(MODE_CLOCK);
   populateTestSensorData();
   testDisplayManager.update(testData);
-  Serial.println(F("Press ENTER to continue to next test..."));
+  Serial.println(F("Press ENTER to continue to phase 3/5..."));
   waitForUserInput();
   
-  Serial.println(F("Testing displays with temperature mode..."));
+  Serial.println(F("Testing phase 3/5: Time-only display"));
+  Serial.println(F("Look for time centered across all displays"));
+  testDisplayManager.displayTimeOnly(testData.currentTime);
+  Serial.println(F("Press ENTER to continue..."));
+  waitForUserInput();
+  
+  Serial.println(F("Testing date-only display"));
+  Serial.println(F("Look for date centered across all displays"));
+  testDisplayManager.displayDateOnly(testData.currentTime);
+  Serial.println(F("Press ENTER to continue..."));
+  waitForUserInput();
+  
+  Serial.println(F("Testing phase 4/5: Temperature mode"));
   Serial.println(F("Look for temperature data across the displays"));
   testDisplayManager.setMode(MODE_TEMPERATURE);
   testDisplayManager.update(testData);
-  Serial.println(F("Press ENTER to continue to next test..."));
+  Serial.println(F("Press ENTER to continue..."));
   waitForUserInput();
   
-  Serial.println(F("Testing displays with weather summary mode..."));
+  Serial.println(F("Testing phase 5/5: Weather summary mode"));
   Serial.println(F("Look for weather data (temp, humidity, pressure) displayed"));
   testDisplayManager.setMode(MODE_WEATHER_SUMMARY);
   testDisplayManager.update(testData);
-  Serial.println(F("Press ENTER to continue to next test..."));
-  waitForUserInput();
-  
-  Serial.println(F("Testing startup message..."));
-  Serial.println(F("Should show 'WEATHER CLOCK' message across displays"));
-  testDisplayManager.showStartupMessage();
-  Serial.println(F("Press ENTER to continue to next test..."));
-  waitForUserInput();
-  
-  Serial.println(F("Testing error display..."));
-  Serial.println(F("Should show 'TEST' or error pattern"));
-  testDisplayManager.showError("TEST");
-  Serial.println(F("Press ENTER to finish display test..."));
+  Serial.println(F("Press ENTER to complete display test..."));
   waitForUserInput();
   
   Serial.println(F("✓ Display test completed"));
-  waitForUserInput();
 }
 
 void testRotaryEncoder() {
