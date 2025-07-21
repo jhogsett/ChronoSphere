@@ -66,12 +66,12 @@ void runInteractiveMenu() {
     Serial.println(F("==========================================="));
     Serial.println(F("1. Test Display (HT16K33 LED Displays)"));
     Serial.println(F("2. Test Rotary Encoder"));
-    Serial.println(F("3. Test Audio Module (VS1053)"));
-    Serial.println(F("4. Test Real Time Clock (DS3231)"));
-    Serial.println(F("5. Test Temperature/Humidity Sensor (AHT21)"));
-    Serial.println(F("6. Test Light Sensor (BH1750)"));
-    Serial.println(F("7. Test Pressure Sensor (DFRobot BMP280)"));
-    Serial.println(F("8. Test LED Strip (NeoPixel)"));
+    Serial.println(F("3. Test Real Time Clock (DS3231)"));
+    Serial.println(F("4. Test Temperature/Humidity Sensor (AHT21)"));
+    Serial.println(F("5. Test Light Sensor (BH1750)"));
+    Serial.println(F("6. Test Pressure Sensor (DFRobot BMP280)"));
+    Serial.println(F("7. Test LED Strip (NeoPixel)"));
+    Serial.println(F("8. Test Audio Module (VS1053)"));
     Serial.println(F("9. Test All Devices (Sequential)"));
     Serial.println(F("0. Exit Test Suite"));
     Serial.println(F("==========================================="));
@@ -98,33 +98,33 @@ void runInteractiveMenu() {
         testRotaryEncoder();
         break;
       case '3':
-        testAudioModule();
-        break;
-      case '4':
         testRealTimeClock();
         break;
-      case '5':
+      case '4':
         testTemperatureHumiditySensor();
         break;
-      case '6':
+      case '5':
         testLightSensor();
         break;
-      case '7':
+      case '6':
         testPressureSensor();
         break;
-      case '8':
+      case '7':
         testLEDStrip();
+        break;
+      case '8':
+        testAudioModule();
         break;
       case '9':
         // Test all devices sequentially
         testDisplay();
         testRotaryEncoder();
-        testAudioModule();
         testRealTimeClock();
         testTemperatureHumiditySensor();
         testLightSensor();
         testPressureSensor();
         testLEDStrip();
+        testAudioModule();
         break;
       case '0':
         Serial.println(F("Exiting test suite..."));
@@ -169,14 +169,7 @@ void testDisplay() {
   Serial.println(F("Press ENTER to continue..."));
   waitForUserInput();
   
-  Serial.println(F("Testing phase 4/5: Temperature mode"));
-  Serial.println(F("Look for temperature data across the displays"));
-  testDisplayManager.setMode(MODE_TEMPERATURE);
-  testDisplayManager.update(testData);
-  Serial.println(F("Press ENTER to continue..."));
-  waitForUserInput();
-  
-  Serial.println(F("Testing phase 5/5: Weather summary mode"));
+  Serial.println(F("Testing phase 4/4: Weather summary mode"));
   Serial.println(F("Look for weather data (temp, humidity, pressure) displayed"));
   testDisplayManager.setMode(MODE_WEATHER_SUMMARY);
   testDisplayManager.update(testData);
@@ -382,6 +375,14 @@ void testTemperatureHumiditySensor() {
     
     delay(2000);
   }
+  
+  // Test temperature word display
+  Serial.println(F("\nTesting temperature word display..."));
+  Serial.println(F("Look for temperature data displayed across the three displays"));
+  testDisplayManager.setMode(MODE_TEMPERATURE);
+  testDisplayManager.update(testSensors.getCurrentData());
+  Serial.println(F("Press ENTER to continue..."));
+  waitForUserInput();
   
   Serial.println(F("✓ Temperature/Humidity sensor test completed"));
   waitForUserInput();
