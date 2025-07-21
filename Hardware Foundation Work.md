@@ -1,0 +1,24 @@
+## Hardware Foundation Work
+
+- Implement test functions for each sensor/device to verify data reading
+    - Each device should be tested one-at-a-time before proceeding to the next device
+- The devices are: 
+    - Display
+        - Ensure the three individual display devices can be written to
+    - Rotary Encoder
+        - Ensure the encoder turning and pushbutton data can be read
+    - Audio Module
+        - Ensure MIDI sounds can be played from the device
+    - Real Time Clock
+        - Ensure the time and date data can be set (to some fixed value, no UI yet)
+        - Ensure the time and data data can be read
+    - Temperature and Humidity Sensor
+        - Ensure the temperature data can be read
+        - Ensure the humidity data can be read
+    - Light Sensor
+        - Ensure the light data can be read
+    - Pressure Sensor
+        - Ensure the pressure data can be read
+    - LED Strip
+        - Ensure the LED Strip can be written to
+- Ensure that the data from each sensor can be printed to the console for verification

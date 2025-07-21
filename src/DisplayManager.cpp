@@ -1,22 +1,22 @@
 #include <Arduino.h>
 #include "DisplayManager.h"
+#include <HT16K33Disp.h>
 #include <stdio.h>
 #include <string.h>  // For strcpy
 
 bool DisplayManager::init() {
-  // Initialize all three display modules
-  for (int i = 0; i < 3; i++) {
-    uint8_t address = DISPLAY_GREEN_ADDRESS + i;
-    if (!displays[i].begin(address)) {
-      Serial.print(F("Display "));
-      Serial.print(i);
-      Serial.println(F(" initialization failed"));
-      return false;
-    }
-    displays[i].setBrightness(8); // Medium brightness
-    displays[i].clear();
-    displays[i].writeDisplay();
-  }
+  // Initialize single display group managing all 3 displays
+  // Different brightness levels needed due to LED color variations
+  byte brightnessLevels[3] = {
+    DISPLAY_GREEN_BRIGHTNESS, 
+    DISPLAY_AMBER_BRIGHTNESS, 
+    DISPLAY_RED_BRIGHTNESS
+  }; // Green, Amber, Red
+  
+  // Create single display object managing 3 displays starting at 0x70
+  displayGroup = new HT16K33Disp(DISPLAY_GREEN_ADDRESS, 3);
+  displayGroup->init(brightnessLevels);
+  displayGroup->clear();
   
   currentMode = MODE_CLOCK;
   lastUpdateTime = 0;
@@ -66,38 +66,71 @@ bool DisplayManager::isTimeToUpdate() {
 }
 
 void DisplayManager::clearAllDisplays() {
-  for (int i = 0; i < 3; i++) {
-    displays[i].clear();
-  }
+  displayGroup->clear();
 }
 
 void DisplayManager::displayOnModule(uint8_t module, const char* text) {
-  if (module > 2) return;
+  // For backward compatibility: position text at specific 4-character segment
+  // Module 0 = chars 0-3, Module 1 = chars 4-7, Module 2 = chars 8-11
+  char displayText[13] = "            "; // 12 spaces
   
-  displays[module].clear();
-  for (int i = 0; i < 4 && text[i] != '\0'; i++) {
-    displays[module].writeDigitAscii(i, text[i]);
+  if (module <= 2) {
+    int startPos = module * 4;
+    // Copy up to 4 characters to the appropriate position
+    for (int i = 0; i < 4 && text[i] != '\0'; i++) {
+      displayText[startPos + i] = text[i];
+    }
   }
-  displays[module].writeDisplay();
+  
+  displayGroup->show_string(displayText);
+}
+
+void DisplayManager::displayString(const char* text) {
+  displayGroup->show_string(text);
+}
+
+void DisplayManager::displayScrollingString(const char* text, int showDelay, int scrollDelay) {
+  displayGroup->scroll_string(text, showDelay, scrollDelay);
 }
 
 void DisplayManager::displayTime(DateTime time) {
-  char timeStr[5];
-  char dateStr[5];
+  char displayText[13];
   
-  formatTime(time, timeStr);
-  formatDate(time, dateStr);
+  // Format time: 4 digits with leading space instead of zero (positions 0-3)
+  int hour = time.hour();
+  if (hour == 0) hour = 12;
+  if (hour > 12) hour -= 12;
   
-  // Display time on green, date on amber
-  displayOnModule(0, timeStr);  // Green
-  displayOnModule(1, dateStr);  // Amber
-  displayOnModule(2, "    ");   // Red - blank
+  // Format date: month in positions 6-7, day in positions 9-10
+  int month = time.month();
+  int day = time.day();
+  
+  // Create 12-character string: "HHMM  MM DD  "
+  //                            0123456789AB
+  if (hour < 10) {
+    sprintf(displayText, " %d%02d  %2d %02d  ", hour, time.minute(), month, day);
+  } else {
+    sprintf(displayText, "%d%02d  %2d %02d  ", hour, time.minute(), month, day);
+  }
+  
+  displayString(displayText);
 }
 
-void DisplayManager::displayDate(DateTime time) {
-  char buffer[5];
-  sprintf(buffer, "%02d%02d", time.month(), time.day());
-  displayOnModule(1, buffer);
+void DisplayManager::formatTime(DateTime time, char* buffer) {
+  int hour = time.hour();
+  if (hour == 0) hour = 12;
+  if (hour > 12) hour -= 12;
+  
+  // Format as 4 digits with leading space for single digit hours
+  if (hour < 10) {
+    sprintf(buffer, " %d%02d", hour, time.minute());
+  } else {
+    sprintf(buffer, "%d%02d", hour, time.minute());
+  }
+}
+
+void DisplayManager::formatDate(DateTime time, char* buffer) {
+  sprintf(buffer, "%02d/%02d", time.month(), time.day());
 }
 
 void DisplayManager::displayTemperature(SensorData data) {
@@ -192,18 +225,6 @@ void DisplayManager::displaySettings() {
   displayOnModule(2, "MODE");
 }
 
-void DisplayManager::formatTime(DateTime time, char* buffer) {
-  int hour = time.hour();
-  if (hour == 0) hour = 12;
-  if (hour > 12) hour -= 12;
-  
-  sprintf(buffer, "%2d%02d", hour, time.minute());
-}
-
-void DisplayManager::formatDate(DateTime time, char* buffer) {
-  sprintf(buffer, "%02d%02d", time.month(), time.day());
-}
-
 void DisplayManager::formatFloat(float value, char* buffer, uint8_t decimals) {
   if (decimals == 0) {
     sprintf(buffer, "%4.0f", value);
@@ -225,10 +246,23 @@ DisplayMode DisplayManager::getCurrentMode() {
   return currentMode;
 }
 
-void DisplayManager::setBrightness(uint8_t brightness) {
-  for (int i = 0; i < 3; i++) {
-    displays[i].setBrightness(brightness);
-  }
+void DisplayManager::setBrightness(uint8_t baseBrightness) {
+  // Apply color compensation to maintain consistent apparent brightness
+  byte compensatedBrightness[3];
+  
+  // Calculate compensated brightness maintaining the ratios: Green=1, Amber=9, Red=15
+  // Base ratios: Green=0.067, Amber=0.6, Red=1.0 (relative to red)
+  compensatedBrightness[0] = (baseBrightness * 1 + 7) / 15;  // Green: scale to 1/15 of red
+  compensatedBrightness[1] = (baseBrightness * 9 + 7) / 15;  // Amber: scale to 9/15 of red  
+  compensatedBrightness[2] = baseBrightness;                 // Red: unchanged
+  
+  // Ensure minimum brightness of 1
+  if (compensatedBrightness[0] < 1) compensatedBrightness[0] = 1;
+  if (compensatedBrightness[1] < 1) compensatedBrightness[1] = 1;
+  if (compensatedBrightness[2] < 1) compensatedBrightness[2] = 1;
+  
+  // Re-initialize display group with new brightness
+  displayGroup->init(compensatedBrightness);
 }
 
 void DisplayManager::adjustBrightnessForAmbientLight(float lightLevel) {

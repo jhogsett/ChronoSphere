@@ -25,6 +25,11 @@
 #define DISPLAY_AMBER_ADDRESS 0x71
 #define DISPLAY_RED_ADDRESS 0x72
 
+// Display Brightness Compensation (compensates for LED color variations)
+#define DISPLAY_GREEN_BRIGHTNESS 1   // Green LEDs are very bright
+#define DISPLAY_AMBER_BRIGHTNESS 9   // Amber LEDs are medium brightness
+#define DISPLAY_RED_BRIGHTNESS 15    // Red LEDs are dim
+
 // Timing Constants
 #define STEPPER_STEPS_PER_HOUR 2048
 #define PENDULUM_SWING_PERIOD 2000  // milliseconds

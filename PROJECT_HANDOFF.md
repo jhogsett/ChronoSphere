@@ -168,7 +168,7 @@ pio run -e nano_every
 pio run -e nanoatmega328
 
 # Upload to connected device
-pio upload -e nano_every
+pio run -e nano_every -t upload
 
 # Monitor serial output
 pio device monitor
