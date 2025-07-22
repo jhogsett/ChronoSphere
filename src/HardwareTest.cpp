@@ -28,6 +28,7 @@ void testTemperatureHumiditySensor();
 void testLightSensor();
 void testPressureSensor();
 void testLEDStrip();
+void testWeatherSummary();
 void runInteractiveMenu();
 void printTestHeader(const char* testName);
 void waitForUserInput();
@@ -72,10 +73,11 @@ void runInteractiveMenu() {
     Serial.println(F("6. Test Pressure Sensor (DFRobot BMP280)"));
     Serial.println(F("7. Test LED Strip (NeoPixel)"));
     Serial.println(F("8. Test Audio Module (VS1053)"));
-    Serial.println(F("9. Test All Devices (Sequential)"));
+    Serial.println(F("9. Test Weather Summary (Multi-Sensor)"));
+    Serial.println(F("A. Test All Devices (Sequential)"));
     Serial.println(F("0. Exit Test Suite"));
     Serial.println(F("==========================================="));
-    Serial.print(F("Enter test number (0-9): "));
+    Serial.print(F("Enter test number (0-9, A): "));
     
     // Wait for user input
     while (!Serial.available()) {
@@ -116,6 +118,10 @@ void runInteractiveMenu() {
         testAudioModule();
         break;
       case '9':
+        testWeatherSummary();
+        break;
+      case 'A':
+      case 'a':
         // Test all devices sequentially
         testDisplay();
         testRotaryEncoder();
@@ -125,6 +131,7 @@ void runInteractiveMenu() {
         testPressureSensor();
         testLEDStrip();
         testAudioModule();
+        testWeatherSummary();
         break;
       case '0':
         Serial.println(F("Exiting test suite..."));
@@ -149,30 +156,23 @@ void testDisplay() {
   }
   
   // Test displays using the actual API
-  Serial.println(F("\nTesting phase 2/5: Clock mode (time + date on all displays)"));
+  Serial.println(F("\nTesting phase 1/3: Clock mode (time + date on all displays)"));
   Serial.println(F("Look for time in GREEN, month in AMBER, day in RED"));
   testDisplayManager.setMode(MODE_CLOCK);
   populateTestSensorData();
   testDisplayManager.update(testData);
-  Serial.println(F("Press ENTER to continue to phase 3/5..."));
+  Serial.println(F("Press ENTER to continue to phase 2/3..."));
   waitForUserInput();
   
-  Serial.println(F("Testing phase 3/5: Time-only display"));
+  Serial.println(F("Testing phase 2/3: Time-only display"));
   Serial.println(F("Look for time centered across all displays"));
   testDisplayManager.displayTimeOnly(testData.currentTime);
   Serial.println(F("Press ENTER to continue..."));
   waitForUserInput();
   
-  Serial.println(F("Testing date-only display"));
+  Serial.println(F("Testing phase 3/3: Date-only display"));
   Serial.println(F("Look for date centered across all displays"));
   testDisplayManager.displayDateOnly(testData.currentTime);
-  Serial.println(F("Press ENTER to continue..."));
-  waitForUserInput();
-  
-  Serial.println(F("Testing phase 4/4: Weather summary mode"));
-  Serial.println(F("Look for weather data (temp, humidity, pressure) displayed"));
-  testDisplayManager.setMode(MODE_WEATHER_SUMMARY);
-  testDisplayManager.update(testData);
   Serial.println(F("Press ENTER to complete display test..."));
   waitForUserInput();
   
@@ -516,6 +516,62 @@ void testLEDStrip() {
   testLightingEffects.update(testData);
   
   Serial.println(F("✓ LED strip test completed"));
+  waitForUserInput();
+}
+
+void testWeatherSummary() {
+  printTestHeader("WEATHER SUMMARY MULTI-SENSOR TEST");
+  
+  Serial.println(F("This test combines all environmental sensors:"));
+  Serial.println(F("- Temperature/Humidity Sensor (AHT21)"));
+  Serial.println(F("- Light Sensor (BH1750)"));  
+  Serial.println(F("- Pressure Sensor (DFRobot BMP280)"));
+  Serial.println(F("- Real Time Clock (DS3231)"));
+  Serial.println();
+  
+  Serial.println(F("Initializing sensors..."));
+  if (testSensors.init()) {
+    Serial.println(F("✓ All sensors initialization successful"));
+  } else {
+    Serial.println(F("✗ One or more sensors failed to initialize"));
+    Serial.println(F("Individual sensor tests should be run first"));
+    waitForUserInput();
+    return;
+  }
+  
+  Serial.println(F("\nReading all sensors and displaying weather summary..."));
+  if (testSensors.readSensors()) {
+    SensorData data = testSensors.getCurrentData();
+    
+    Serial.println(F("Current sensor readings:"));
+    Serial.print(F("  Temperature: "));
+    Serial.print(data.temperature, 2);
+    Serial.print(F("°C ("));
+    Serial.print(data.temperatureF, 2);
+    Serial.print(F("°F), Word: "));
+    Serial.println(data.tempWord);
+    Serial.print(F("  Humidity: "));
+    Serial.print(data.humidity, 2);
+    Serial.println(F("%"));
+    Serial.print(F("  Pressure: "));
+    Serial.print(data.pressure, 2);
+    Serial.println(F(" hPa"));
+    Serial.print(F("  Light Level: "));
+    Serial.print(data.lightLevel, 1);
+    Serial.println(F(" lux"));
+    
+    Serial.println(F("\nDisplaying weather summary on LED displays..."));
+    Serial.println(F("Look for weather data (temp, humidity, pressure) displayed"));
+    testDisplayManager.setMode(MODE_WEATHER_SUMMARY);
+    testDisplayManager.update(data);
+    Serial.println(F("Press ENTER to continue..."));
+    waitForUserInput();
+  } else {
+    Serial.println(F("Failed to read sensor data"));
+    Serial.println(F("Check individual sensor connections and run individual tests"));
+  }
+  
+  Serial.println(F("✓ Weather summary test completed"));
   waitForUserInput();
 }
 
