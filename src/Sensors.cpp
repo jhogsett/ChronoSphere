@@ -2,7 +2,7 @@
 #include "Sensors.h"
 #include <math.h>
 
-Sensors::Sensors() : bmp280(&Wire, DFRobot_BMP280_IIC::eSdoLow) {
+Sensors::Sensors() : bmp280(&Wire, BMP::eSdoLow) {
   // Constructor initializes BMP280 with I2C (SDA/SCL pins, SDO pulled low)
 }
 
@@ -31,11 +31,31 @@ bool Sensors::init() {
     return false;
   }
   
-  // Initialize BMP280 pressure sensor
-  if (!bmp280.begin()) {
+  // Initialize BMP280 pressure sensor (using exact working API)
+  bmp280.reset();
+  Serial.println("BMP280 initialization test");
+  
+  while(bmp280.begin() != BMP::eStatusOK) {
+    Serial.println("BMP280 begin failed");
+    switch(bmp280.lastOperateStatus) {
+      case BMP::eStatusOK: Serial.println("everything ok"); break;
+      case BMP::eStatusErr: Serial.println("unknown error"); break;
+      case BMP::eStatusErrDeviceNotDetected: Serial.println("device not detected"); break;
+      case BMP::eStatusErrParameter: Serial.println("parameter error"); break;
+      default: Serial.println("unknown status"); break;
+    }
     Serial.println(F("DFRobot BMP280 IIC initialization failed"));
     return false;
   }
+  
+  Serial.println("BMP280 begin success");
+  
+  // Configure sensor exactly like working example
+  bmp280.setConfigFilter(BMP::eConfigFilter_off);
+  bmp280.setConfigTStandby(BMP::eConfigTStandby_125);
+  bmp280.setCtrlMeasSamplingTemp(BMP::eSampling_X8);
+  bmp280.setCtrlMeasSamplingPress(BMP::eSampling_X8);
+  bmp280.setCtrlMeasMode(BMP::eCtrlMeasModeNormal);
   
   // Initialize BH1750 light sensor
   if (!lightMeter.begin()) {

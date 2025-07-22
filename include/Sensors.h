@@ -23,7 +23,8 @@ class Sensors {
 private:
   DS3231 rtc;
   Adafruit_AHTX0 aht;
-  DFRobot_BMP280_IIC bmp280;  // DFRobot BMP280 I2C library
+  typedef DFRobot_BMP280_IIC BMP;
+  BMP bmp280;  // DFRobot BMP280 I2C library
   BH1750 lightMeter;
   
   unsigned long lastReadTime;

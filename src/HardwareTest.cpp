@@ -683,6 +683,14 @@ void testWeatherSummary() {
     return;
   }
   
+  Serial.println(F("Initializing LED displays..."));
+  if (testDisplayManager.init()) {
+    Serial.println(F("✓ Display initialization successful"));
+  } else {
+    Serial.println(F("✗ Display initialization failed"));
+    Serial.println(F("Weather data will be shown in serial output only"));
+  }
+  
   Serial.println(F("\nReading all sensors and displaying weather summary..."));
   if (testSensors.readSensors()) {
     SensorData data = testSensors.getCurrentData();
@@ -705,10 +713,54 @@ void testWeatherSummary() {
     Serial.println(F(" lux"));
     
     Serial.println(F("\nDisplaying weather summary on LED displays..."));
-    Serial.println(F("Look for weather data (temp, humidity, pressure) displayed"));
+    Serial.println(F("Weather data will be shown in sequence:"));
+    
+    Serial.println(F("Phase 1: Temperature display"));
+    Serial.print(F("Showing temperature: "));
+    Serial.print(data.temperatureF, 1);
+    Serial.println(F("°F"));
+    Serial.println(F("Expected 12-character display layout:"));
+    Serial.println(F("Characters 0-3 (GREEN): Temperature value"));
+    Serial.println(F("Characters 4-7 (AMBER): Feels like value"));  
+    Serial.println(F("Characters 8-11 (RED): Temperature word"));
+    Serial.print(F("Expected string: \""));
+    char expectedTemp[13];
+    sprintf(expectedTemp, "%3.1f%3d %-4s", data.temperatureF, (int)data.feelsLikeF, data.tempWord);
+    Serial.print(expectedTemp);
+    Serial.println(F("\""));
+    Serial.println(F("NOTE: Current MODE_TEMPERATURE may use displayOnModule() instead of 12-char formatting"));
+    testDisplayManager.setMode(MODE_TEMPERATURE);
+    testDisplayManager.update(data);
+    Serial.println(F("Press ENTER to continue to Phase 2..."));
+    waitForUserInput();
+    
+    Serial.println(F("Phase 2: Full weather summary"));
+    Serial.println(F("Expected 12-character display layout:"));
+    Serial.println(F("Characters 0-3 (GREEN): Temperature"));
+    Serial.println(F("Characters 4-7 (AMBER): Humidity"));
+    Serial.println(F("Characters 8-11 (RED): Pressure"));
+    char expectedWeather[13];
+    sprintf(expectedWeather, "%3d %3d%%%-4.0f", (int)data.temperatureF, (int)data.humidity, data.pressure);
+    Serial.print(F("Expected string: \""));
+    Serial.print(expectedWeather);
+    Serial.println(F("\""));
+    Serial.print(F("Temperature: "));
+    Serial.print(data.temperatureF, 1);
+    Serial.print(F("°F, Humidity: "));
+    Serial.print(data.humidity, 1);
+    Serial.print(F("%, Pressure: "));
+    Serial.print(data.pressure, 1);
+    Serial.println(F(" hPa"));
     testDisplayManager.setMode(MODE_WEATHER_SUMMARY);
     testDisplayManager.update(data);
-    Serial.println(F("Press ENTER to continue..."));
+    Serial.println(F("Press ENTER to continue to Phase 3..."));
+    waitForUserInput();
+    
+    Serial.println(F("Phase 3: Time display"));
+    Serial.println(F("Showing current time"));
+    testDisplayManager.setMode(MODE_CLOCK);
+    testDisplayManager.update(data);
+    Serial.println(F("Press ENTER to complete weather summary test..."));
     waitForUserInput();
   } else {
     Serial.println(F("Failed to read sensor data"));

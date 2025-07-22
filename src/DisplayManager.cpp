@@ -4,6 +4,15 @@
 #include <stdio.h>
 #include <string.h>  // For strcpy
 
+// Helper function for formatting floats for display (from reference\smart_thermo3.ino)
+void float_to_fixed(float value, char *buffer, const char *pattern, byte decimals=1){
+  int split = 10 * decimals;
+  int ivalue = int(value * split);
+  int valuei = ivalue / split;
+  int valued = ivalue % split;
+  sprintf(buffer, pattern, valuei, valued);
+}
+
 bool DisplayManager::init() {
   // Initialize single display group managing all 3 displays
   // Different brightness levels needed due to LED color variations
@@ -166,33 +175,62 @@ void DisplayManager::formatDate(DateTime time, char* buffer) {
 }
 
 void DisplayManager::displayTemperature(SensorData data) {
-  char tempStr[5];
-  char feelsStr[5];
+  char displayText[13];
+  char tempStr[5];   // For temperature string like "75.0" 
+  char feelsStr[5];  // For feels like string like "78.0"
   
-  // Raw temperature on green
-  sprintf(tempStr, "%3.1f", data.temperatureF);
-  displayOnModule(0, tempStr);
+  // Create 12-character string with 4-char segments: "TTTT FFFF WWWW"
+  // Characters 0-3 (GREEN): Temperature (e.g. "75.0")  
+  // Characters 4-7 (AMBER): Feels like (e.g. "78.0")
+  // Characters 8-11 (RED): Temperature word (e.g. "WARM")
   
-  // Feels like on amber
-  sprintf(feelsStr, "%3d", (int)data.feelsLikeF);
-  displayOnModule(1, feelsStr);
+  // Format temperature using float_to_fixed like in reference code
+  if(data.temperatureF < 100.0){
+    float_to_fixed(data.temperatureF, tempStr, "%2d.%1d");
+  } else {
+    float_to_fixed(data.temperatureF, tempStr, "%3d");  // No decimal for 100+
+  }
   
-  // Four-letter word on appropriate color display
-  displayOnModule(data.displayColor, data.tempWord);
+  // Format feels like temperature  
+  if(data.feelsLikeF < 100.0){
+    float_to_fixed(data.feelsLikeF, feelsStr, "%2d.%1d");
+  } else {
+    float_to_fixed(data.feelsLikeF, feelsStr, "%3d");  // No decimal for 100+
+  }
+  
+  // Combine into 12-character display string
+  sprintf(displayText, "%4s %4s%-4s", tempStr, feelsStr, data.tempWord);
+  
+  displayString(displayText);
 }
 
 void DisplayManager::displayWeatherSummary(SensorData data) {
-  char tempStr[5];
-  char humStr[5];
-  char pressStr[5];
+  char displayText[13];
+  char tempStr[5];     // For temperature like "79.0"
+  char humidStr[5];    // For humidity like "45.0"
+  char pressStr[5];    // For pressure like "1013"
   
-  sprintf(tempStr, "%3d", (int)data.temperatureF);
-  sprintf(humStr, "%3d%%", (int)data.humidity);
-  sprintf(pressStr, "%4.0f", data.pressure);
+  // Create 12-character string: "TTTT HHHH PPPP"
+  // Characters 0-3 (GREEN): Temperature (e.g. "79.0")
+  // Characters 4-7 (AMBER): Humidity (e.g. "45.0")
+  // Characters 8-11 (RED): Pressure (e.g. "1013")
   
-  displayOnModule(0, tempStr);   // Green
-  displayOnModule(1, humStr);    // Amber  
-  displayOnModule(2, pressStr);  // Red
+  // Format temperature 
+  if(data.temperatureF < 100.0){
+    float_to_fixed(data.temperatureF, tempStr, "%2d.%1d");
+  } else {
+    float_to_fixed(data.temperatureF, tempStr, "%3d");
+  }
+  
+  // Format humidity (usually no decimals needed for humidity)
+  sprintf(humidStr, "%3d%%", (int)data.humidity);
+  
+  // Format pressure as integer (avoid float formatting issues)
+  sprintf(pressStr, "%4d", (int)data.pressure);
+  
+  sprintf(displayText, "%4s%4s%4s", tempStr, humidStr, pressStr);
+  
+  displayString(displayText);
 }
 
 void DisplayManager::displayRollingCurrent(SensorData data) {
@@ -209,7 +247,11 @@ void DisplayManager::displayRollingCurrent(SensorData data) {
   switch (rollingIndex) {
     case 0: // Time and temperature
       formatTime(data.currentTime, buffer1);
-      sprintf(buffer2, "%3d", (int)data.temperatureF);
+      if(data.temperatureF < 100.0){
+        float_to_fixed(data.temperatureF, buffer2, "%2d.%1d");
+      } else {
+        float_to_fixed(data.temperatureF, buffer2, "%3d");
+      }
       strcpy(buffer3, data.tempWord);
       break;
       
@@ -220,7 +262,7 @@ void DisplayManager::displayRollingCurrent(SensorData data) {
       break;
       
     case 2: // Pressure
-      sprintf(buffer1, "%4.0f", data.pressure);
+      sprintf(buffer1, "%4d", (int)data.pressure);
       strcpy(buffer2, "PRES");
       strcpy(buffer3, "HPA ");
       break;
