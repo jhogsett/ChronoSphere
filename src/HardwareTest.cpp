@@ -494,43 +494,73 @@ void testPressureSensor() {
   // Initialize I2C
   Wire.begin();
   
-  // Create standalone BMP280 sensor object
-  DFRobot_BMP280_IIC bmp280(&Wire, DFRobot_BMP280_IIC::eSdoLow);
+  // Create BMP280 sensor object exactly like the working example
+  typedef DFRobot_BMP280_IIC BMP;
+  BMP bmp(&Wire, BMP::eSdoLow);
   
-  if (!bmp280.begin()) {
+  // Reset and initialize exactly like the working example
+  bmp.reset();
+  Serial.println("BMP280 initialization test");
+  
+  while(bmp.begin() != BMP::eStatusOK) {
+    Serial.println("BMP280 begin failed");
+    switch(bmp.lastOperateStatus) {
+      case BMP::eStatusOK: Serial.println("everything ok"); break;
+      case BMP::eStatusErr: Serial.println("unknown error"); break;
+      case BMP::eStatusErrDeviceNotDetected: Serial.println("device not detected"); break;
+      case BMP::eStatusErrParameter: Serial.println("parameter error"); break;
+      default: Serial.println("unknown status"); break;
+    }
     Serial.println(F("✗ BMP280 sensor initialization failed"));
+    Serial.println(F("  Check I2C connections and sensor power"));
     waitForUserInput();
     return;
   }
   
+  Serial.println("BMP280 begin success");
   Serial.println(F("✓ BMP280 sensor initialization successful"));
+  
+  // Configure sensor exactly like working example
+  bmp.setConfigFilter(BMP::eConfigFilter_off);
+  bmp.setConfigTStandby(BMP::eConfigTStandby_125);
+  bmp.setCtrlMeasSamplingTemp(BMP::eSampling_X8);
+  bmp.setCtrlMeasSamplingPress(BMP::eSampling_X8);
+  bmp.setCtrlMeasMode(BMP::eCtrlMeasModeNormal);
+  
+  delay(100);
   
   Serial.println(F("\nReading pressure data (5 samples)..."));
   for (int i = 0; i < 5; i++) {
-    float pressure = bmp280.getPressure() / 100.0; // Convert Pa to hPa
+    float temp = bmp.getTemperature();
+    uint32_t press = bmp.getPressure();
+    float pressureHPa = press / 100.0; // Convert Pa to hPa
     
     Serial.print(F("Sample "));
     Serial.print(i + 1);
-    Serial.print(F(": Pressure: "));
-    Serial.print(pressure, 2);
-    Serial.print(F(" hPa"));
+    Serial.print(F(": Temperature: "));
+    Serial.print(temp);
+    Serial.print(F("°C, Pressure: "));
+    Serial.print(press);
+    Serial.print(F(" Pa ("));
+    Serial.print(pressureHPa, 2);
+    Serial.print(F(" hPa)"));
     
     // Provide context for pressure levels
-    if (pressure < 980) {
+    if (pressureHPa < 980) {
       Serial.println(F(" (Low - Storm)"));
-    } else if (pressure < 1013) {
+    } else if (pressureHPa < 1013) {
       Serial.println(F(" (Below Average)"));
-    } else if (pressure < 1030) {
+    } else if (pressureHPa < 1030) {
       Serial.println(F(" (Normal)"));
     } else {
       Serial.println(F(" (High)"));
     }
     
     // Validate reasonable range
-    if (pressure >= 800 && pressure <= 1200) {
-      Serial.println(F("  ✓ Value within expected range"));
+    if (pressureHPa >= 800 && pressureHPa <= 1200) {
+      Serial.println(F("  ✓ Values within expected range"));
     } else {
-      Serial.println(F("  ⚠ Value outside expected range"));
+      Serial.println(F("  ⚠ Values outside expected range"));
     }
     
     delay(2000);
