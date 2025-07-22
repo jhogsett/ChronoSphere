@@ -252,16 +252,42 @@ void testAudioModule() {
   if (testAudioManager.init()) {
     Serial.println(F("✓ Audio module initialization successful"));
     
-    Serial.println(F("\nTesting audio playback..."));
-    Serial.println(F("Note: Audio module functionality is currently commented out"));
-    Serial.println(F("Check AudioManager.cpp for implementation details"));
+    Serial.println(F("\nTesting audio playback with Columbo doorbell chime..."));
+    Serial.println(F("You should hear a 3-note descending chime: G-E-C"));
+    Serial.println(F("Playing in 2 seconds..."));
+    delay(2000);
+    
+    // Play the Columbo doorbell chime (G-E-C descending)
+    const uint8_t MIDI_CHANNEL = 0;
+    const uint8_t NOTE_VELOCITY = 100;
+    const uint8_t COLUMBO_NOTE_1 = 67; // G4
+    const uint8_t COLUMBO_NOTE_2 = 64; // E4  
+    const uint8_t COLUMBO_NOTE_3 = 60; // C4
+    
+    // Set to Tubular Bells for authentic chime sound
+    testAudioManager.setChimeInstrument(INSTRUMENT_TUBULAR_BELLS);
+    delay(100);
+    
+    Serial.println(F("Playing Note 1: G4 (67)"));
+    testAudioManager.playNote(COLUMBO_NOTE_1, NOTE_VELOCITY, 1); // 1 quarter note = 250ms
+    delay(200); // Short pause between notes
+    
+    Serial.println(F("Playing Note 2: E4 (64)"));
+    testAudioManager.playNote(COLUMBO_NOTE_2, NOTE_VELOCITY, 1); // 1 quarter note = 250ms
+    delay(200); // Short pause between notes
+    
+    Serial.println(F("Playing Note 3: C4 (60)"));
+    testAudioManager.playNote(COLUMBO_NOTE_3, NOTE_VELOCITY, 2); // 2 quarter notes = 500ms
+    delay(2500); // Let final note ring out
+    
+    Serial.println(F("✓ Audio playback test completed"));
+    Serial.println(F("Did you hear the 3-note chime? (G-E-C descending)"));
   } else {
     Serial.println(F("✗ Audio module initialization failed"));
-    Serial.println(F("Note: Audio module is currently commented out in AudioManager"));
+    Serial.println(F("Check VS1053 connections and power"));
   }
   
   Serial.println(F("✓ Audio module test completed"));
-  Serial.println(F("Note: Listen for audio output to verify functionality when enabled"));
   waitForUserInput();
 }
 

@@ -2,7 +2,7 @@
 #define AUDIO_MANAGER_H
 
 #include "Sensors.h"  // This includes DS3231-RTC.h with DateTime class
-// #include <YourCustomVS1053Library.h>  // Replace with your custom VS1053 library
+#include "VS1053_MIDI.h"  // VS1053 MIDI library
 #include "Config.h"
 
 struct ChimeNote {
@@ -12,7 +12,7 @@ struct ChimeNote {
 
 class AudioManager {
 private:
-  // Adafruit_VS1053_FilePlayer musicPlayer;  // Replace with your custom VS1053 object
+  VS1053_MIDI musicPlayer;  // VS1053 MIDI object (will be initialized in constructor)
   
   ChimeType currentChimeType;
   MidiInstrument currentInstrument;
@@ -26,13 +26,18 @@ private:
   static const ChimeNote whittingtonChime[];
   static const ChimeNote stMichaelsChime[];
   
-  void playNote(uint8_t note, uint8_t velocity, uint16_t duration);
   void playChimeSequence(const ChimeNote* sequence, uint8_t length);
   void playHourChime(uint8_t hour);
 
 public:
+  // Constructor
+  AudioManager();
+  
   bool init();
   void update();
+  
+  // Core playback functions
+  void playNote(uint8_t note, uint8_t velocity, uint16_t duration);
   
   // Chime functions
   void checkAndPlayChime(DateTime currentTime);
