@@ -87,6 +87,9 @@ void setup() {
     motorControl.calibratePendulum();
     
     delay(2000); // Show startup message
+    
+    // Set initial display mode to ensure synchronization
+    displayManager.setMode(currentDisplayMode);
   } else {
     Serial.println(F("FATAL: System initialization failed"));
     displayManager.showError("INIT");
@@ -112,29 +115,24 @@ void loop() {
   // Handle user input
   handleUserInput();
   
+  // Always get current sensor data (or use last good reading)
+  SensorData currentData = sensors.getCurrentData();
+  
   // Read sensors when needed
   if (sensors.isTimeToRead()) {
     if (sensors.readSensors()) {
-      SensorData currentData = sensors.getCurrentData();
+      Serial.println(F("Sensors updated"));
+      currentData = sensors.getCurrentData();
       
       // Update data logger
       dataLogger.update(currentData);
       
-      // Update display
-      if (displayManager.isTimeToUpdate()) {
-        displayManager.update(currentData);
-        
-        // Adjust lighting based on ambient light
-        lightingEffects.adjustBrightnessForAmbientLight(currentData.lightLevel);
-        displayManager.adjustBrightnessForAmbientLight(currentData.lightLevel);
-      }
-      
       // Update lighting effects
       lightingEffects.update(currentData);
       
-      // Update motors
-      DateTime now = currentData.currentTime;
-      motorControl.updateMinuteHand(now.getMinute(), now.getSecond());
+      // Adjust lighting based on ambient light
+      lightingEffects.adjustBrightnessForAmbientLight(currentData.lightLevel);
+      displayManager.adjustBrightnessForAmbientLight(currentData.lightLevel);
       
       // Check for alerts
       checkWeatherAlerts();
@@ -144,9 +142,20 @@ void loop() {
     }
   }
   
+  // Update display every cycle (like hardware test does)
+  if (displayManager.isTimeToUpdate()) {
+    Serial.print(F("Updating display, mode: "));
+    Serial.println((int)currentDisplayMode);
+    displayManager.update(currentData);
+  }
+  
+  // Update motors
+  DateTime now = currentData.currentTime;
+  motorControl.updateMinuteHand(now.getMinute(), now.getSecond());
+  
   // Update continuous systems
   motorControl.update(); // Update pendulum and stepper motor
-  audioManager.update(); // Handle chime timing and playback
+  audioManager.update(); // Handle chime timing and playbook
   
   // Check for chimes
   audioManager.checkAndPlayChime(sensors.getCurrentTime());

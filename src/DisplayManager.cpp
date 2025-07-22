@@ -65,6 +65,13 @@ void DisplayManager::update(SensorData sensorData) {
     case MODE_SETTINGS:
       displaySettings();
       break;
+      
+    default:
+      // Debug: Show unexpected mode
+      char modeText[13];
+      sprintf(modeText, "MODE ERR %03d", currentMode);
+      displayString(modeText);
+      break;
   }
   
   lastUpdateTime = millis();
@@ -121,6 +128,9 @@ void DisplayManager::displayTime(DateTime time) {
   } else {
     sprintf(displayText, "%d%02d  %2d %02d  ", hour, time.getMinute(), month, day);
   }
+  
+  Serial.print(F("Clock display: "));
+  Serial.println(displayText);
   
   displayString(displayText);
 }
@@ -240,6 +250,8 @@ void DisplayManager::displayRollingCurrent(SensorData data) {
   if (currentTime - rollingTimer > 3000) {
     rollingTimer = currentTime;
     rollingIndex = (rollingIndex + 1) % 4;
+    Serial.print(F("Rolling index: "));
+    Serial.println(rollingIndex);
   }
   
   char buffer1[5], buffer2[5], buffer3[5];
@@ -274,29 +286,28 @@ void DisplayManager::displayRollingCurrent(SensorData data) {
       break;
   }
   
-  displayOnModule(0, buffer1);
-  displayOnModule(1, buffer2);
-  displayOnModule(2, buffer3);
+  // Combine into single 12-character string for unified display
+  char displayText[13];
+  sprintf(displayText, "%4s%4s%4s", buffer1, buffer2, buffer3);
+  
+  Serial.print(F("Rolling display: "));
+  Serial.println(displayText);
+  
+  displayString(displayText);
 }
 
 void DisplayManager::displayRollingHistorical() {
-  // Placeholder - would display historical data
-  displayOnModule(0, "HIST");
-  displayOnModule(1, "ORICAL");
-  displayOnModule(2, "DATA");
+  // Placeholder - would display historical data using unified 12-character display
+  displayString("HIST ORICAL DATA");
 }
 
 void DisplayManager::displayRollingTrends() {
-  // Placeholder - would display trend data
-  displayOnModule(0, "TREN");
-  displayOnModule(1, "DING");
-  displayOnModule(2, "DATA");
+  // Placeholder - would display trend data using unified 12-character display  
+  displayString("TRENDING DATA");
 }
 
 void DisplayManager::displaySettings() {
-  displayOnModule(0, "SETT");
-  displayOnModule(1, "INGS");
-  displayOnModule(2, "MODE");
+  displayString("SETTINGS MODE");
 }
 
 void DisplayManager::formatFloat(float value, char* buffer, uint8_t decimals) {
@@ -358,28 +369,19 @@ void DisplayManager::adjustBrightnessForAmbientLight(float lightLevel) {
 }
 
 void DisplayManager::showStartupMessage() {
-  displayOnModule(0, "WEAT");
-  displayOnModule(1, "HER ");
-  displayOnModule(2, "CLOK");
-  
+  displayString("WEATHER CLOK");
   delay(1000);
-  
-  displayOnModule(0, "INIT");
-  displayOnModule(1, "IALIZ");
-  displayOnModule(2, "ING ");
+  displayString("INITIALIZING");
 }
 
 void DisplayManager::showError(const char* errorCode) {
-  displayOnModule(0, "ERR ");
-  displayOnModule(1, errorCode);
-  displayOnModule(2, "FAIL");
+  char errorText[13];
+  sprintf(errorText, "ERR %-4s FAIL", errorCode);
+  displayString(errorText);
 }
 
 void DisplayManager::showSetting(SettingItem setting, int value) {
-  char valueStr[5];
-  sprintf(valueStr, "%4d", value);
-  
-  displayOnModule(0, "SET ");
-  displayOnModule(1, valueStr);
-  displayOnModule(2, "TING");
+  char settingText[13];
+  sprintf(settingText, "SET %4d TING", value);
+  displayString(settingText);
 }
