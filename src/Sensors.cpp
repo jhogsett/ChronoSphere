@@ -7,17 +7,23 @@ Sensors::Sensors() : bmp280(&Wire, DFRobot_BMP280_IIC::eSdoLow) {
 }
 
 bool Sensors::init() {
-  // Initialize RTC
-  if (!rtc.begin()) {
+  // Initialize DS3231 RTC
+  Wire.begin(); // DS3231 requires Wire to be initialized
+  
+  // The DS3231 library doesn't have a begin() method like RTClib
+  // We'll check if we can read from it instead
+  bool century = false;
+  bool h12Flag;
+  bool pm;
+  
+  // Try to read the year as a test
+  uint8_t year = rtc.getYear();
+  if (year > 99) { // Invalid year suggests RTC not working
     Serial.println(F("RTC initialization failed"));
     return false;
   }
   
-  // Check if RTC lost power and set time if needed
-  if (rtc.lostPower()) {
-    Serial.println(F("RTC lost power, setting time"));
-    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
-  }
+  Serial.println(F("DS3231 RTC initialized successfully"));
   
   // Initialize AHT21 temperature/humidity sensor
   if (!aht.begin()) {
@@ -44,8 +50,20 @@ bool Sensors::init() {
 }
 
 bool Sensors::readSensors() {
-  // Read RTC
-  currentData.currentTime = rtc.now();
+  // Read DS3231 RTC - get current time directly
+  bool century = false;
+  bool h12Flag;
+  bool pm;
+  
+  // Create DateTime from individual components
+  int year = 2000 + rtc.getYear(); // DS3231 returns 2-digit year
+  int month = rtc.getMonth(century);
+  int day = rtc.getDate();
+  int hour = rtc.getHour(h12Flag, pm);
+  int minute = rtc.getMinute();
+  int second = rtc.getSecond();
+  
+  currentData.currentTime = DateTime(year, month, day, hour, minute, second);
   
   // Read AHT21
   sensors_event_t humidity, temp;
@@ -158,7 +176,15 @@ uint8_t Sensors::getDisplayColor(float feelsLikeF) {
 }
 
 bool Sensors::setDateTime(DateTime newDateTime) {
-  rtc.adjust(newDateTime);
+  // Convert 4-digit year to 2-digit for DS3231
+  int year2digit = newDateTime.getYear() - 2000;
+  
+  rtc.setYear(year2digit);
+  rtc.setMonth(newDateTime.getMonth());
+  rtc.setDate(newDateTime.getDay());
+  rtc.setHour(newDateTime.getHour());
+  rtc.setMinute(newDateTime.getMinute());
+  rtc.setSecond(newDateTime.getSecond());
   return true;
 }
 

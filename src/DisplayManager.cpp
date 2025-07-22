@@ -97,20 +97,20 @@ void DisplayManager::displayTime(DateTime time) {
   char displayText[13];
   
   // Format time: 4 digits with leading space instead of zero (positions 0-3)
-  int hour = time.hour();
+  int hour = time.getHour();
   if (hour == 0) hour = 12;
   if (hour > 12) hour -= 12;
   
   // Format date: month in positions 6-7, day in positions 9-10
-  int month = time.month();
-  int day = time.day();
+  int month = time.getMonth();
+  int day = time.getDay();
   
   // Create 12-character string: "HHMM  MM DD  "
   //                            0123456789AB
   if (hour < 10) {
-    sprintf(displayText, " %d%02d  %2d %02d  ", hour, time.minute(), month, day);
+    sprintf(displayText, " %d%02d  %2d %02d  ", hour, time.getMinute(), month, day);
   } else {
-    sprintf(displayText, "%d%02d  %2d %02d  ", hour, time.minute(), month, day);
+    sprintf(displayText, "%d%02d  %2d %02d  ", hour, time.getMinute(), month, day);
   }
   
   displayString(displayText);
@@ -121,13 +121,13 @@ void DisplayManager::displayTimeOnly(DateTime time) {
   
   // Format time: "  HH MM SS  " - center-justified with colors
   // GREEN: HH, AMBER: MM, RED: SS
-  int hour = time.hour();
+  int hour = time.getHour();
   if (hour == 0) hour = 12;
   if (hour > 12) hour -= 12;
   
   // Create 12-character string: "  HH MM SS  "
   //                            0123456789AB
-  sprintf(displayText, "  %2d %02d %02d  ", hour, time.minute(), time.second());
+  sprintf(displayText, "  %2d %02d %02d  ", hour, time.getMinute(), time.getSecond());
   
   displayString(displayText);
 }
@@ -137,9 +137,9 @@ void DisplayManager::displayDateOnly(DateTime time) {
   
   // Format date: "  MM DD YYYY" - using all three colors
   // GREEN: MM, AMBER: DD, RED: YYYY
-  int month = time.month();
-  int day = time.day();
-  int year = time.year();
+  int month = time.getMonth();
+  int day = time.getDay();
+  int year = time.getYear();
   
   // Create 12-character string: "  MM DD YYYY"
   //                            0123456789AB
@@ -149,20 +149,20 @@ void DisplayManager::displayDateOnly(DateTime time) {
 }
 
 void DisplayManager::formatTime(DateTime time, char* buffer) {
-  int hour = time.hour();
+  int hour = time.getHour();
   if (hour == 0) hour = 12;
   if (hour > 12) hour -= 12;
   
   // Format as 4 digits with leading space for single digit hours
   if (hour < 10) {
-    sprintf(buffer, " %d%02d", hour, time.minute());
+    sprintf(buffer, " %d%02d", hour, time.getMinute());
   } else {
-    sprintf(buffer, "%d%02d", hour, time.minute());
+    sprintf(buffer, "%d%02d", hour, time.getMinute());
   }
 }
 
 void DisplayManager::formatDate(DateTime time, char* buffer) {
-  sprintf(buffer, "%02d/%02d", time.month(), time.day());
+  sprintf(buffer, "%02d/%02d", time.getMonth(), time.getDay());
 }
 
 void DisplayManager::displayTemperature(SensorData data) {

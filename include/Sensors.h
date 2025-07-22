@@ -1,7 +1,7 @@
 #ifndef SENSORS_H
 #define SENSORS_H
 
-#include <RTClib.h>
+#include <DS3231-RTC.h>
 #include <Adafruit_AHTX0.h>
 #include <DFRobot_BMP280.h>
 #include <BH1750.h>
@@ -21,7 +21,7 @@ struct SensorData {
 
 class Sensors {
 private:
-  RTC_DS3231 rtc;
+  DS3231 rtc;
   Adafruit_AHTX0 aht;
   DFRobot_BMP280_IIC bmp280;  // DFRobot BMP280 I2C library
   BH1750 lightMeter;

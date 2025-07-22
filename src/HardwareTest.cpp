@@ -268,70 +268,104 @@ void testAudioModule() {
 void testRealTimeClock() {
   printTestHeader("DS3231 REAL TIME CLOCK TEST");
   
-  Serial.println(F("Initializing RTC..."));
-  if (testSensors.init()) {
-    Serial.println(F("✓ RTC initialization successful"));
-  } else {
-    Serial.println(F("✗ RTC initialization failed"));
+  Serial.println(F("Initializing DS3231 RTC directly..."));
+  
+  // Initialize Wire for I2C communication
+  Wire.begin();
+  
+  // Create a temporary DS3231 object for testing
+  DS3231 rtc;
+  
+  // Test RTC by trying to read the year
+  bool century = false;
+  bool h12Flag;
+  bool pm;
+  
+  uint8_t year = rtc.getYear();
+  if (year > 99) { // Invalid year suggests RTC not working
+    Serial.println(F("✗ DS3231 RTC initialization failed - cannot read valid year"));
     waitForUserInput();
     return;
   }
   
-  // Read sensor data to get current time
-  Serial.println(F("\nReading current time..."));
-  if (testSensors.readSensors()) {
-    SensorData data = testSensors.getCurrentData();
-    DateTime currentTime = data.currentTime;
-    
-    Serial.print(F("Current Date/Time: "));
-    Serial.print(currentTime.year(), DEC);
-    Serial.print('/');
-    Serial.print(currentTime.month(), DEC);
-    Serial.print('/');
-    Serial.print(currentTime.day(), DEC);
-    Serial.print(" ");
-    Serial.print(currentTime.hour(), DEC);
-    Serial.print(':');
-    if (currentTime.minute() < 10) Serial.print('0');
-    Serial.print(currentTime.minute(), DEC);
-    Serial.print(':');
-    if (currentTime.second() < 10) Serial.print('0');
-    Serial.println(currentTime.second(), DEC);
-  } else {
-    Serial.println(F("✗ Failed to read sensor data"));
-  }
+  Serial.println(F("✓ DS3231 RTC initialized successfully"));
+  
+  // Read current time directly from DS3231
+  Serial.println(F("\nReading current time from DS3231..."));
+  
+  uint8_t rtcYear = rtc.getYear();
+  uint8_t rtcMonth = rtc.getMonth(century);
+  uint8_t rtcDay = rtc.getDate();
+  uint8_t rtcHour = rtc.getHour(h12Flag, pm);
+  uint8_t rtcMinute = rtc.getMinute();
+  uint8_t rtcSecond = rtc.getSecond();
+  
+  // Convert to full year
+  int fullYear = 2000 + rtcYear;
+  
+  Serial.print(F("Current Date/Time: "));
+  Serial.print(fullYear, DEC);
+  Serial.print('/');
+  Serial.print(rtcMonth, DEC);
+  Serial.print('/');
+  Serial.print(rtcDay, DEC);
+  Serial.print(" ");
+  Serial.print(rtcHour, DEC);
+  Serial.print(':');
+  if (rtcMinute < 10) Serial.print('0');
+  Serial.print(rtcMinute, DEC);
+  Serial.print(':');
+  if (rtcSecond < 10) Serial.print('0');
+  Serial.println(rtcSecond, DEC);
   
   // Test setting a fixed time (July 21, 2025, 12:30:45)
-  Serial.println(F("\nSetting test time: 2025-07-21 12:30:45"));
-  DateTime testTime(2025, 7, 21, 12, 30, 45);
-  if (testSensors.setDateTime(testTime)) {
-    Serial.println(F("✓ Time set successfully"));
-  } else {
-    Serial.println(F("✗ Failed to set time"));
-  }
+  Serial.println(F("\nTesting time setting..."));
+  Serial.println(F("Setting test time: 2025-07-21 12:30:45"));
   
-  delay(2000);
+  rtc.setYear(25); // DS3231 uses 2-digit year (25 = 2025)
+  rtc.setMonth(7);
+  rtc.setDate(21);
+  rtc.setHour(12);
+  rtc.setMinute(30);
+  rtc.setSecond(45);
   
-  // Read back the set time
+  Serial.println(F("✓ Time set successfully"));
+  
+  // Wait a moment then read back the set time
+  delay(1000);
+  
   Serial.println(F("Reading back set time..."));
-  if (testSensors.readSensors()) {
-    SensorData data = testSensors.getCurrentData();
-    DateTime readBackTime = data.currentTime;
-    
-    Serial.print(F("Read Back Time: "));
-    Serial.print(readBackTime.year(), DEC);
-    Serial.print('/');
-    Serial.print(readBackTime.month(), DEC);
-    Serial.print('/');
-    Serial.print(readBackTime.day(), DEC);
-    Serial.print(" ");
-    Serial.print(readBackTime.hour(), DEC);
-    Serial.print(':');
-    if (readBackTime.minute() < 10) Serial.print('0');
-    Serial.print(readBackTime.minute(), DEC);
-    Serial.print(':');
-    if (readBackTime.second() < 10) Serial.print('0');
-    Serial.println(readBackTime.second(), DEC);
+  
+  uint8_t readYear = rtc.getYear();
+  uint8_t readMonth = rtc.getMonth(century);
+  uint8_t readDay = rtc.getDate();
+  uint8_t readHour = rtc.getHour(h12Flag, pm);
+  uint8_t readMinute = rtc.getMinute();
+  uint8_t readSecond = rtc.getSecond();
+  
+  int readFullYear = 2000 + readYear;
+  
+  Serial.print(F("Read Back Time: "));
+  Serial.print(readFullYear, DEC);
+  Serial.print('/');
+  Serial.print(readMonth, DEC);
+  Serial.print('/');
+  Serial.print(readDay, DEC);
+  Serial.print(" ");
+  Serial.print(readHour, DEC);
+  Serial.print(':');
+  if (readMinute < 10) Serial.print('0');
+  Serial.print(readMinute, DEC);
+  Serial.print(':');
+  if (readSecond < 10) Serial.print('0');
+  Serial.println(readSecond, DEC);
+  
+  // Verify the time was set correctly (allowing for a few seconds difference)
+  if (readFullYear == 2025 && readMonth == 7 && readDay == 21 && 
+      readHour == 12 && readMinute == 30) {
+    Serial.println(F("✓ RTC time setting and reading test PASSED"));
+  } else {
+    Serial.println(F("✗ RTC time setting verification FAILED"));
   }
   
   Serial.println(F("✓ RTC test completed"));
@@ -341,14 +375,21 @@ void testRealTimeClock() {
 void testTemperatureHumiditySensor() {
   printTestHeader("AHT21 TEMPERATURE/HUMIDITY SENSOR TEST");
   
-  Serial.println(F("Initializing AHT21 sensor..."));
-  if (testSensors.init()) {
-    Serial.println(F("✓ AHT21 sensor initialization successful"));
-  } else {
+  Serial.println(F("Initializing AHT21 sensor directly..."));
+  
+  // Initialize I2C
+  Wire.begin();
+  
+  // Create standalone AHT21 sensor object
+  Adafruit_AHTX0 aht;
+  
+  if (!aht.begin()) {
     Serial.println(F("✗ AHT21 sensor initialization failed"));
     waitForUserInput();
     return;
   }
+  
+  Serial.println(F("✓ AHT21 sensor initialization successful"));
   
   Serial.println(F("\nReading temperature and humidity (5 samples)..."));
   for (int i = 0; i < 5; i++) {
@@ -356,19 +397,26 @@ void testTemperatureHumiditySensor() {
     Serial.print(i + 1);
     Serial.print(F(": "));
     
-    if (testSensors.readSensors()) {
-      SensorData data = testSensors.getCurrentData();
+    sensors_event_t humidity, temp;
+    if (aht.getEvent(&humidity, &temp)) {
+      float tempC = temp.temperature;
+      float tempF = tempC * 9.0 / 5.0 + 32.0;
+      float hum = humidity.relative_humidity;
       
       Serial.print(F("Temperature: "));
-      Serial.print(data.temperature, 2);
+      Serial.print(tempC, 2);
       Serial.print(F("°C ("));
-      Serial.print(data.temperatureF, 2);
+      Serial.print(tempF, 2);
       Serial.print(F("°F), Humidity: "));
-      Serial.print(data.humidity, 2);
-      Serial.print(F("%, Feels Like: "));
-      Serial.print(data.feelsLikeF, 2);
-      Serial.print(F("°F, Word: "));
-      Serial.println(data.tempWord);
+      Serial.print(hum, 2);
+      Serial.println(F("%"));
+      
+      // Validate reasonable ranges
+      if (tempC >= -40 && tempC <= 85 && hum >= 0 && hum <= 100) {
+        Serial.println(F("  ✓ Values within expected range"));
+      } else {
+        Serial.println(F("  ⚠ Values outside expected range"));
+      }
     } else {
       Serial.println(F("Failed to read sensor"));
     }
@@ -376,14 +424,7 @@ void testTemperatureHumiditySensor() {
     delay(2000);
   }
   
-  // Test temperature word display
-  Serial.println(F("\nTesting temperature word display..."));
-  Serial.println(F("Look for temperature data displayed across the three displays"));
-  testDisplayManager.setMode(MODE_TEMPERATURE);
-  testDisplayManager.update(testSensors.getCurrentData());
-  Serial.println(F("Press ENTER to continue..."));
-  waitForUserInput();
-  
+  Serial.println(F("\nNote: Display test skipped (requires all sensors initialized)"));
   Serial.println(F("✓ Temperature/Humidity sensor test completed"));
   waitForUserInput();
 }
@@ -391,41 +432,51 @@ void testTemperatureHumiditySensor() {
 void testLightSensor() {
   printTestHeader("BH1750 LIGHT SENSOR TEST");
   
-  Serial.println(F("Initializing BH1750 light sensor..."));
-  if (testSensors.init()) {
-    Serial.println(F("✓ BH1750 sensor initialization successful"));
-  } else {
+  Serial.println(F("Initializing BH1750 light sensor directly..."));
+  
+  // Initialize I2C
+  Wire.begin();
+  
+  // Create standalone BH1750 sensor object
+  BH1750 lightMeter;
+  
+  if (!lightMeter.begin()) {
     Serial.println(F("✗ BH1750 sensor initialization failed"));
     waitForUserInput();
     return;
   }
+  
+  Serial.println(F("✓ BH1750 sensor initialization successful"));
   
   Serial.println(F("\nReading light levels (10 samples)..."));
   Serial.println(F("Try covering and uncovering the sensor to see changes"));
   delay(2000);
   
   for (int i = 0; i < 10; i++) {
-    if (testSensors.readSensors()) {
-      SensorData data = testSensors.getCurrentData();
-      
-      Serial.print(F("Sample "));
-      Serial.print(i + 1);
-      Serial.print(F(": Light Level: "));
-      Serial.print(data.lightLevel, 2);
-      Serial.print(F(" lux"));
-      
-      // Provide context for light levels
-      if (data.lightLevel < 10) {
-        Serial.println(F(" (Dark)"));
-      } else if (data.lightLevel < 200) {
-        Serial.println(F(" (Dim)"));
-      } else if (data.lightLevel < 1000) {
-        Serial.println(F(" (Indoor lighting)"));
-      } else {
-        Serial.println(F(" (Bright)"));
-      }
+    float lux = lightMeter.readLightLevel();
+    
+    Serial.print(F("Sample "));
+    Serial.print(i + 1);
+    Serial.print(F(": Light Level: "));
+    Serial.print(lux, 2);
+    Serial.print(F(" lux"));
+    
+    // Provide context for light levels
+    if (lux < 10) {
+      Serial.println(F(" (Dark)"));
+    } else if (lux < 200) {
+      Serial.println(F(" (Dim)"));
+    } else if (lux < 1000) {
+      Serial.println(F(" (Indoor lighting)"));
     } else {
-      Serial.println(F("Failed to read sensor"));
+      Serial.println(F(" (Bright)"));
+    }
+    
+    // Validate reasonable range
+    if (lux >= 0 && lux <= 65535) {
+      Serial.println(F("  ✓ Value within expected range"));
+    } else {
+      Serial.println(F("  ⚠ Value outside expected range"));
     }
     
     delay(1000);
@@ -438,27 +489,48 @@ void testLightSensor() {
 void testPressureSensor() {
   printTestHeader("DFROBOT BMP280 PRESSURE SENSOR TEST");
   
-  Serial.println(F("Initializing DFRobot BMP280 pressure sensor..."));
-  if (testSensors.init()) {
-    Serial.println(F("✓ BMP280 sensor initialization successful"));
-  } else {
+  Serial.println(F("Initializing DFRobot BMP280 pressure sensor directly..."));
+  
+  // Initialize I2C
+  Wire.begin();
+  
+  // Create standalone BMP280 sensor object
+  DFRobot_BMP280_IIC bmp280(&Wire, DFRobot_BMP280_IIC::eSdoLow);
+  
+  if (!bmp280.begin()) {
     Serial.println(F("✗ BMP280 sensor initialization failed"));
     waitForUserInput();
     return;
   }
   
+  Serial.println(F("✓ BMP280 sensor initialization successful"));
+  
   Serial.println(F("\nReading pressure data (5 samples)..."));
   for (int i = 0; i < 5; i++) {
-    if (testSensors.readSensors()) {
-      SensorData data = testSensors.getCurrentData();
-      
-      Serial.print(F("Sample "));
-      Serial.print(i + 1);
-      Serial.print(F(": Pressure: "));
-      Serial.print(data.pressure, 2);
-      Serial.println(F(" hPa"));
+    float pressure = bmp280.getPressure() / 100.0; // Convert Pa to hPa
+    
+    Serial.print(F("Sample "));
+    Serial.print(i + 1);
+    Serial.print(F(": Pressure: "));
+    Serial.print(pressure, 2);
+    Serial.print(F(" hPa"));
+    
+    // Provide context for pressure levels
+    if (pressure < 980) {
+      Serial.println(F(" (Low - Storm)"));
+    } else if (pressure < 1013) {
+      Serial.println(F(" (Below Average)"));
+    } else if (pressure < 1030) {
+      Serial.println(F(" (Normal)"));
     } else {
-      Serial.println(F("Failed to read sensor"));
+      Serial.println(F(" (High)"));
+    }
+    
+    // Validate reasonable range
+    if (pressure >= 800 && pressure <= 1200) {
+      Serial.println(F("  ✓ Value within expected range"));
+    } else {
+      Serial.println(F("  ⚠ Value outside expected range"));
     }
     
     delay(2000);
@@ -577,7 +649,7 @@ void testWeatherSummary() {
 
 void populateTestSensorData() {
   // Fill test data with reasonable values
-  testData.currentTime = DateTime(2025, 7, 21, 12, 30, 45);
+  testData.currentTime = DateTime(2025, 7, 21, 12, 30, 45); // DS3231-RTC DateTime uses 4-digit year
   testData.temperature = 23.5;      // 23.5°C
   testData.humidity = 45.0;         // 45%
   testData.pressure = 1013.25;      // 1013.25 hPa (standard pressure)

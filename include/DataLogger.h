@@ -2,9 +2,8 @@
 #define DATA_LOGGER_H
 
 #include <EEPROM.h>
-#include <RTClib.h>  // Need DateTime class
+#include "Sensors.h"  // This now includes our DateTime struct
 #include "Config.h"
-#include "Sensors.h"
 
 struct HourlyRecord {
   DateTime timestamp;

@@ -1,7 +1,7 @@
 #ifndef AUDIO_MANAGER_H
 #define AUDIO_MANAGER_H
 
-#include <RTClib.h>  // Need DateTime class
+#include "Sensors.h"  // This includes DS3231-RTC.h with DateTime class
 // #include <YourCustomVS1053Library.h>  // Replace with your custom VS1053 library
 #include "Config.h"
 

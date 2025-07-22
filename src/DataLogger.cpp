@@ -29,15 +29,15 @@ void DataLogger::update(SensorData currentData) {
   
   // Check if it's time to log hourly data
   DateTime now = currentData.currentTime;
-  if (now.hour() != lastHourLogged.hour() || 
-      (lastHourLogged.year() == 0)) { // First run
+  if (now.getHour() != lastHourLogged.getHour() || 
+      (lastHourLogged.getYear() == 0)) { // First run
     logHourlyData();
     lastHourLogged = now;
   }
   
   // Check if it's time to log daily data
-  if (now.day() != lastDayLogged.day() || 
-      (lastDayLogged.year() == 0)) { // First run
+  if (now.getDay() != lastDayLogged.getDay() || 
+      (lastDayLogged.getYear() == 0)) { // First run
     logDailyData();
     lastDayLogged = now;
   }
@@ -58,7 +58,7 @@ void DataLogger::logHourlyData() {
   
   uint8_t validSamples = 0;
   for (int i = 0; i < currentSampleIndex && i < 12; i++) {  // Limited to 12 samples
-    if (currentHourSamples[i].currentTime.year() > 0) { // Valid sample
+    if (currentHourSamples[i].currentTime.getYear() > 0) { // Valid sample
       tempSum += currentHourSamples[i].temperatureF;
       humSum += currentHourSamples[i].humidity;
       pressSum += currentHourSamples[i].pressure;
@@ -118,7 +118,7 @@ void DataLogger::logDailyData() {
     int index = (currentHourlyIndex - 1 - i + MAX_HOURLY_RECORDS) % MAX_HOURLY_RECORDS;
     HourlyRecord &hourly = hourlyData[index];
     
-    if (hourly.timestamp.year() > 0) { // Valid record
+    if (hourly.timestamp.getYear() > 0) { // Valid record
       tempSum += hourly.avgTemperature;
       humSum += hourly.avgHumidity;
       pressSum += hourly.avgPressure;
@@ -173,7 +173,7 @@ float DataLogger::getAverageTemperature(uint8_t hours) {
   
   for (uint8_t i = 0; i < hours && i < MAX_HOURLY_RECORDS; i++) {
     HourlyRecord record = getHourlyRecord(i);
-    if (record.timestamp.year() > 0) {
+    if (record.timestamp.getYear() > 0) {
       sum += record.avgTemperature;
       count++;
     }
@@ -188,7 +188,7 @@ float DataLogger::getAveragePressure(uint8_t hours) {
   
   for (uint8_t i = 0; i < hours && i < MAX_HOURLY_RECORDS; i++) {
     HourlyRecord record = getHourlyRecord(i);
-    if (record.timestamp.year() > 0) {
+    if (record.timestamp.getYear() > 0) {
       sum += record.avgPressure;
       count++;
     }
@@ -204,7 +204,7 @@ TrendData DataLogger::calculateTrends() {
   HourlyRecord current = getHourlyRecord(0);
   HourlyRecord threeHoursAgo = getHourlyRecord(3);
   
-  if (current.timestamp.year() > 0 && threeHoursAgo.timestamp.year() > 0) {
+  if (current.timestamp.getYear() > 0 && threeHoursAgo.timestamp.getYear() > 0) {
     // Calculate trends per hour
     trends.temperatureTrend = (current.avgTemperature - threeHoursAgo.avgTemperature) / 3.0;
     trends.pressureTrend = (current.avgPressure - threeHoursAgo.avgPressure) / 3.0;
@@ -274,7 +274,7 @@ bool DataLogger::isDataValid() {
 uint8_t DataLogger::getDataAge() {
   // Return hours since oldest valid data
   HourlyRecord oldest = getHourlyRecord(MAX_HOURLY_RECORDS - 1);
-  if (oldest.timestamp.year() > 0) {
+  if (oldest.timestamp.getYear() > 0) {
     return MAX_HOURLY_RECORDS;
   }
   

@@ -134,7 +134,7 @@ void loop() {
       
       // Update motors
       DateTime now = currentData.currentTime;
-      motorControl.updateMinuteHand(now.minute(), now.second());
+      motorControl.updateMinuteHand(now.getMinute(), now.getSecond());
       
       // Check for alerts
       checkWeatherAlerts();

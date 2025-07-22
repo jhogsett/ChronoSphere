@@ -56,8 +56,8 @@ void AudioManager::checkAndPlayChime(DateTime currentTime) {
   static int lastChimeMinute = -1;
   static int lastChimeHour = -1;
   
-  int currentMinute = currentTime.minute();
-  int currentHour = currentTime.hour();
+  int currentMinute = currentTime.getMinute();
+  int currentHour = currentTime.getHour();
   
   bool shouldChime = false;
   
