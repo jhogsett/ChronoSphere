@@ -249,7 +249,7 @@ void handleUserInput() {
     Serial.println(settingsMode);
   }
   
-  // Handle button presses - only respond to BUTTON_PRESSED state once
+  // Handle button presses - respond to both PRESSED and HELD states
   if (buttonState == BUTTON_PRESSED) {
     Serial.println(F("BUTTON_PRESSED detected"));
     
@@ -272,34 +272,13 @@ void handleUserInput() {
         settingTimeComponent = (settingTimeComponent + 1) % 3;
         Serial.print(F("TIME: settingTimeComponent after: "));
         Serial.println(settingTimeComponent);
-        if (settingTimeComponent == 0) {
-          // Completed time setting, save and move to date
-          if (hasDateTimeChanges) {
-            sensors.setDateTime(pendingDateTime);
-            Serial.println(F("Time saved to RTC"));
-          }
-          currentSetting = SETTING_DATE;
-          settingDateComponent = 0;
-          Serial.println(F("Moving to DATE setting"));
-        } else {
-          Serial.print(F("TIME: Now editing "));
-          Serial.println(settingTimeComponent == 1 ? "MINUTE" : "SECOND");
-        }
+        // Don't advance to next setting - stay in time setting and cycle through components
+        Serial.print(F("TIME: Now editing "));
+        Serial.println(settingTimeComponent == 0 ? "HOUR" : settingTimeComponent == 1 ? "MINUTE" : "SECOND");
       } else if (currentSetting == SETTING_DATE) {
         settingDateComponent = (settingDateComponent + 1) % 3;
-        if (settingDateComponent == 0) {
-          // Completed date setting, save and move to next setting
-          if (hasDateTimeChanges) {
-            sensors.setDateTime(pendingDateTime);
-            Serial.println(F("Date saved to RTC"));
-            hasDateTimeChanges = false;
-          }
-          currentSetting = SETTING_CHIME_TYPE;
-          Serial.println(F("Moving to CHIME_TYPE setting"));
-        } else {
-          Serial.print(F("DATE: Now editing "));
-          Serial.println(settingDateComponent == 1 ? "DAY" : "YEAR");
-        }
+        Serial.print(F("DATE: Now editing "));
+        Serial.println(settingDateComponent == 0 ? "MONTH" : settingDateComponent == 1 ? "DAY" : "YEAR");
       } else {
         // Move to next setting or exit settings
         int nextSetting = (int)currentSetting + 1;
@@ -317,6 +296,42 @@ void handleUserInput() {
           Serial.print(F("Moving to setting: "));
           Serial.println((int)currentSetting);
         }
+      }
+    }
+  }
+  
+  // Handle long button press to advance between setting categories
+  if (buttonState == BUTTON_HELD) {
+    Serial.println(F("BUTTON_HELD detected"));
+    
+    if (settingsMode) {
+      if (currentSetting == SETTING_TIME) {
+        // Save time changes and move to date setting
+        if (hasDateTimeChanges) {
+          sensors.setDateTime(pendingDateTime);
+          Serial.println(F("Time saved to RTC"));
+        }
+        currentSetting = SETTING_DATE;
+        settingDateComponent = 0;
+        Serial.println(F("LONG PRESS: Moving to DATE setting"));
+      } else if (currentSetting == SETTING_DATE) {
+        // Save date changes and move to chime settings
+        if (hasDateTimeChanges) {
+          sensors.setDateTime(pendingDateTime);
+          Serial.println(F("Date saved to RTC"));
+          hasDateTimeChanges = false;
+        }
+        currentSetting = SETTING_CHIME_TYPE;
+        Serial.println(F("LONG PRESS: Moving to CHIME_TYPE setting"));
+      } else {
+        // Exit settings mode on long press from other settings
+        if (hasDateTimeChanges) {
+          sensors.setDateTime(pendingDateTime);
+          Serial.println(F("Final time/date saved to RTC"));
+        }
+        settingsMode = false;
+        hasDateTimeChanges = false;
+        Serial.println(F("LONG PRESS: Exiting settings mode"));
       }
     }
   }
