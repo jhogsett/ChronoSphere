@@ -137,6 +137,10 @@ void loop() {
   // Always get current sensor data (or use last good reading)
   SensorData currentData = sensors.getCurrentData();
   
+  // DEBUG: Check initial currentData lightLevel
+  Serial.print(F("DEBUG: Initial currentData.lightLevel: "));
+  Serial.println(currentData.lightLevel);
+  
   // Read sensors when needed and save real data
   SensorData realData = currentData;  // Keep a copy of real sensor data
   if (sensors.isTimeToRead()) {
@@ -198,7 +202,11 @@ void loop() {
   currentData.humidity = realData.humidity;          
   currentData.pressure = realData.pressure;        
   currentData.lightLevel = realData.lightLevel;
-  currentData.currentTime = realData.currentTime;  // IMPORTANT: Restore the real time!       
+  currentData.currentTime = realData.currentTime;  // IMPORTANT: Restore the real time!
+
+  // DEBUG: Check final currentData lightLevel after restoration
+  Serial.print(F("DEBUG: Final currentData.lightLevel: "));
+  Serial.println(currentData.lightLevel);       
 
   // Serial.print(F("DISPLAY DATA - ALL DUMMY: Temp: "));
   // Serial.print(currentData.temperatureF);
