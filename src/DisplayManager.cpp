@@ -78,9 +78,14 @@ void DisplayManager::update(SensorData sensorData) {
 }
 
 void DisplayManager::updateSettings(SensorData sensorData, bool settingsMode, SettingItem currentSetting, 
-                                     int settingTimeComponent, int settingDateComponent, DateTime pendingDateTime) {
+                                     int settingTimeComponent, int settingDateComponent, DateTime pendingDateTime,
+                                     bool editingSettingValue) {
   if (settingsMode) {
-    displaySettingsInterface(currentSetting, settingTimeComponent, settingDateComponent, pendingDateTime);
+    if (editingSettingValue) {
+      displaySettingsInterface(currentSetting, settingTimeComponent, settingDateComponent, pendingDateTime);
+    } else {
+      displaySettingsMenu(currentSetting);
+    }
   } else {
     // Normal display update
     update(sensorData);
@@ -389,6 +394,36 @@ void DisplayManager::displayRollingTrends() {
 
 void DisplayManager::displaySettings() {
   displayString("SETTINGS MODE");
+}
+
+void DisplayManager::displaySettingsMenu(SettingItem currentSetting) {
+  char displayText[13];
+  
+  switch (currentSetting) {
+    case SETTING_TIME:
+      sprintf(displayText, "SET TIME    ");
+      break;
+    case SETTING_DATE:
+      sprintf(displayText, "SET DATE    ");
+      break;
+    case SETTING_CHIME_TYPE:
+      sprintf(displayText, "CHIME TYPE  ");
+      break;
+    case SETTING_CHIME_INSTRUMENT:
+      sprintf(displayText, "CHIME INST  ");
+      break;
+    case SETTING_CHIME_FREQUENCY:
+      sprintf(displayText, "CHIME FREQ  ");
+      break;
+    case SETTING_EXIT:
+      sprintf(displayText, "EXIT        ");
+      break;
+    default:
+      sprintf(displayText, "SETTING %03d ", (int)currentSetting);
+      break;
+  }
+  
+  displayString(displayText);
 }
 
 void DisplayManager::displaySettingsInterface(SettingItem currentSetting, int settingTimeComponent, 

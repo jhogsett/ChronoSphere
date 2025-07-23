@@ -26,6 +26,7 @@ private:
   void displayRollingHistorical();
   void displayRollingTrends();
   void displaySettings();
+  void displaySettingsMenu(SettingItem currentSetting);
   void displaySettingsInterface(SettingItem currentSetting, int settingTimeComponent, 
                                 int settingDateComponent, DateTime pendingDateTime);
   
@@ -38,7 +39,8 @@ public:
   bool init();
   void update(SensorData sensorData);
   void updateSettings(SensorData sensorData, bool settingsMode, SettingItem currentSetting, 
-                      int settingTimeComponent, int settingDateComponent, DateTime pendingDateTime);
+                      int settingTimeComponent, int settingDateComponent, DateTime pendingDateTime, 
+                      bool editingSettingValue);
   void setMode(DisplayMode mode);
   DisplayMode getCurrentMode();
   bool isTimeToUpdate();

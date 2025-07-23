@@ -21,6 +21,7 @@ LightingEffects lightingEffects;
 // System state
 DisplayMode currentDisplayMode = MODE_ROLLING_CURRENT;  // Start in rolling mode for debugging
 bool settingsMode = false;
+bool editingSettingValue = false;  // New: track if we're in a setting or editing its value
 SettingItem currentSetting = SETTING_TIME;
 
 // Time/Date setting state
@@ -215,10 +216,15 @@ void loop() {
   // Update display every cycle (like hardware test does)
   if (displayManager.isTimeToUpdate()) {
     Serial.print(F("Updating display, mode: "));
-    Serial.println((int)currentDisplayMode);
+    Serial.print((int)currentDisplayMode);
+    Serial.print(F(", settingsMode: "));
+    Serial.print(settingsMode);
+    Serial.print(F(", editingSettingValue: "));
+    Serial.println(editingSettingValue);
+    
     if (settingsMode) {
       displayManager.updateSettings(currentData, settingsMode, currentSetting, 
-                                    settingTimeComponent, settingDateComponent, pendingDateTime);
+                                    settingTimeComponent, settingDateComponent, pendingDateTime, editingSettingValue);
     } else {
       displayManager.update(currentData);
     }
@@ -246,33 +252,65 @@ void handleUserInput() {
     Serial.print(buttonState);
     Serial.print(F(" (IDLE=0, PRESSED=1, HELD=2, RELEASED=3)"));
     Serial.print(F(", Settings mode: "));
-    Serial.println(settingsMode);
+    Serial.print(F(", editingSettingValue: "));
+    Serial.println(editingSettingValue);
   }
   
-  // Handle button presses - respond to both PRESSED and HELD states
-  if (buttonState == BUTTON_PRESSED) {
-    Serial.println(F("BUTTON_PRESSED detected"));
+  // Handle button presses - only process BUTTON_PRESSED once per physical press
+  static ButtonState lastButtonState = BUTTON_IDLE;
+  bool buttonJustPressed = (buttonState == BUTTON_PRESSED && lastButtonState != BUTTON_PRESSED);
+  bool buttonJustHeld = (buttonState == BUTTON_HELD && lastButtonState != BUTTON_HELD);
+  bool buttonJustReleased = (buttonState == BUTTON_RELEASED && lastButtonState != BUTTON_RELEASED);
+  lastButtonState = buttonState;
+  
+  // Reset edge detection after button release to prepare for next press
+  if (buttonJustReleased) {
+    Serial.println(F("Button released - resetting for next press"));
+  }
+  
+  if (buttonJustPressed) {
+    Serial.println(F("BUTTON_PRESSED detected (edge)"));
     
     if (!settingsMode) {
-      // Enter settings mode
-      Serial.println(F("Attempting to enter settings mode..."));
+      // Enter settings mode (settings menu)
+      Serial.println(F("Entering settings menu..."));
       settingsMode = true;
+      editingSettingValue = false;  // Start in menu, not editing
       currentSetting = SETTING_TIME;
       settingTimeComponent = 0;
       settingDateComponent = 0;
       hasDateTimeChanges = false;
-      Serial.println(F("Settings mode entered successfully"));
+      Serial.println(F("Settings menu entered - use encoder to select setting"));
+    } else if (!editingSettingValue) {
+      // In settings menu - enter the selected setting to edit it OR exit
+      if (currentSetting == SETTING_EXIT) {
+        // EXIT option selected - leave settings mode
+        Serial.println(F("EXIT selected - leaving settings mode"));
+        settingsMode = false;
+        editingSettingValue = false;
+      } else {
+        // Regular setting selected - enter editing mode
+        Serial.print(F("Entering setting for editing: "));
+        Serial.println((int)currentSetting);
+        editingSettingValue = true;
+        
+        // Initialize components for the selected setting
+        if (currentSetting == SETTING_TIME) {
+          settingTimeComponent = 0;  // Start with hour
+          Serial.println(F("Now editing TIME - HOUR"));
+        } else if (currentSetting == SETTING_DATE) {
+          settingDateComponent = 0;  // Start with month
+          Serial.println(F("Now editing DATE - MONTH"));
+        }
+      }
     } else {
-      Serial.println(F("Already in settings mode, handling component change..."));
-      
-      // In settings mode - button cycles through components or settings
+      // In setting edit mode - cycle through components
       if (currentSetting == SETTING_TIME) {
         Serial.print(F("TIME: settingTimeComponent before: "));
         Serial.println(settingTimeComponent);
         settingTimeComponent = (settingTimeComponent + 1) % 3;
         Serial.print(F("TIME: settingTimeComponent after: "));
         Serial.println(settingTimeComponent);
-        // Don't advance to next setting - stay in time setting and cycle through components
         Serial.print(F("TIME: Now editing "));
         Serial.println(settingTimeComponent == 0 ? "HOUR" : settingTimeComponent == 1 ? "MINUTE" : "SECOND");
       } else if (currentSetting == SETTING_DATE) {
@@ -280,59 +318,31 @@ void handleUserInput() {
         Serial.print(F("DATE: Now editing "));
         Serial.println(settingDateComponent == 0 ? "MONTH" : settingDateComponent == 1 ? "DAY" : "YEAR");
       } else {
-        // Move to next setting or exit settings
-        int nextSetting = (int)currentSetting + 1;
-        if (nextSetting >= SETTING_MOTOR_SETTINGS + 1) {
-          // Save any pending changes before exiting
-          if (hasDateTimeChanges) {
-            sensors.setDateTime(pendingDateTime);
-            Serial.println(F("Final time/date saved to RTC"));
-          }
-          settingsMode = false;
-          hasDateTimeChanges = false;
-          Serial.println(F("Exiting settings mode"));
-        } else {
-          currentSetting = (SettingItem)nextSetting;
-          Serial.print(F("Moving to setting: "));
-          Serial.println((int)currentSetting);
-        }
+        Serial.println(F("Cycling through setting options"));
       }
     }
   }
   
-  // Handle long button press to advance between setting categories
+  // Handle long button press to go back/exit from editing mode only
+  static bool wasHeld = false;
+  
   if (buttonState == BUTTON_HELD) {
-    Serial.println(F("BUTTON_HELD detected"));
+    wasHeld = true;
+  }
+  
+  if (buttonJustReleased && wasHeld) {
+    Serial.println(F("LONG PRESS RELEASED - Processing exit"));
+    wasHeld = false; // Reset the flag
     
-    if (settingsMode) {
-      if (currentSetting == SETTING_TIME) {
-        // Save time changes and move to date setting
-        if (hasDateTimeChanges) {
-          sensors.setDateTime(pendingDateTime);
-          Serial.println(F("Time saved to RTC"));
-        }
-        currentSetting = SETTING_DATE;
-        settingDateComponent = 0;
-        Serial.println(F("LONG PRESS: Moving to DATE setting"));
-      } else if (currentSetting == SETTING_DATE) {
-        // Save date changes and move to chime settings
-        if (hasDateTimeChanges) {
-          sensors.setDateTime(pendingDateTime);
-          Serial.println(F("Date saved to RTC"));
-          hasDateTimeChanges = false;
-        }
-        currentSetting = SETTING_CHIME_TYPE;
-        Serial.println(F("LONG PRESS: Moving to CHIME_TYPE setting"));
-      } else {
-        // Exit settings mode on long press from other settings
-        if (hasDateTimeChanges) {
-          sensors.setDateTime(pendingDateTime);
-          Serial.println(F("Final time/date saved to RTC"));
-        }
-        settingsMode = false;
+    if (settingsMode && editingSettingValue) {
+      // Exit from editing back to settings menu (long press only works when editing)
+      Serial.println(F("LONG PRESS: Exiting to settings menu"));
+      if (hasDateTimeChanges) {
+        sensors.setDateTime(pendingDateTime);
+        Serial.println(F("Time/date saved to RTC"));
         hasDateTimeChanges = false;
-        Serial.println(F("LONG PRESS: Exiting settings mode"));
       }
+      editingSettingValue = false;
     }
   }
   
@@ -341,12 +351,24 @@ void handleUserInput() {
     Serial.print(F("Encoder delta: "));
     Serial.print(encoderDelta);
     Serial.print(F(", Settings mode: "));
-    Serial.println(settingsMode);
+    Serial.print(settingsMode);
+    Serial.print(F(", Editing: "));
+    Serial.println(editingSettingValue);
     
-    if (settingsMode) {
+    if (settingsMode && !editingSettingValue) {
+      // In settings menu - navigate through settings list
+      int newSetting = (int)currentSetting + encoderDelta;
+      if (newSetting < 0) newSetting = SETTING_EXIT;  // Wrap to EXIT (last setting)
+      if (newSetting > SETTING_EXIT) newSetting = 0;   // Wrap to first setting
+      currentSetting = (SettingItem)newSetting;
+      
+      Serial.print(F("Settings menu: Selected setting "));
+      Serial.println((int)currentSetting);
+    } else if (settingsMode && editingSettingValue) {
+      // In setting edit mode - adjust the setting value
       handleSettingChange(encoderDelta);
     } else {
-      // Change display mode
+      // Normal display mode - change display mode
       DisplayMode newMode = userInput.handleModeChange(currentDisplayMode, encoderDelta);
       if (newMode != currentDisplayMode) {
         currentDisplayMode = newMode;
