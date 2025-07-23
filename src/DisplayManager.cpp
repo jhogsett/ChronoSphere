@@ -244,45 +244,86 @@ void DisplayManager::displayWeatherSummary(SensorData data) {
 }
 
 void DisplayManager::displayRollingCurrent(SensorData data) {
+  Serial.println(F("=== ROLLING DISPLAY START ==="));
   unsigned long currentTime = millis();
+  
+  Serial.print(F("Current time: "));
+  Serial.println(currentTime);
+  Serial.print(F("Rolling timer: "));
+  Serial.println(rollingTimer);
+  Serial.print(F("Time diff: "));
+  Serial.println(currentTime - rollingTimer);
   
   // Change display every 3 seconds
   if (currentTime - rollingTimer > 3000) {
     rollingTimer = currentTime;
-    rollingIndex = (rollingIndex + 1) % 4;
-    Serial.print(F("Rolling index: "));
+    rollingIndex = (rollingIndex + 1) % 5;
+    Serial.print(F("Rolling index changed to: "));
     Serial.println(rollingIndex);
   }
+  
+  Serial.print(F("Current rolling index: "));
+  Serial.println(rollingIndex);
   
   char buffer1[5], buffer2[5], buffer3[5];
   
   switch (rollingIndex) {
-    case 0: // Time and temperature
+    case 0: // Time and actual temperature
+      Serial.println(F("Case 0: Time and actual temperature"));
       formatTime(data.currentTime, buffer1);
       if(data.temperatureF < 100.0){
         float_to_fixed(data.temperatureF, buffer2, "%2d.%1d");
       } else {
         float_to_fixed(data.temperatureF, buffer2, "%3d");
       }
-      strcpy(buffer3, data.tempWord);
+      strcpy(buffer3, "TEMP");
+      Serial.print(F("Buffer1: ")); Serial.println(buffer1);
+      Serial.print(F("Buffer2: ")); Serial.println(buffer2);
+      Serial.print(F("Buffer3: ")); Serial.println(buffer3);
       break;
       
-    case 1: // Date and humidity
+    case 1: // Date and feels-like temperature
+      Serial.println(F("Case 1: Date and feels-like temperature"));
       formatDate(data.currentTime, buffer1);
+      if(data.feelsLikeF < 100.0){
+        float_to_fixed(data.feelsLikeF, buffer2, "%2d.%1d");
+      } else {
+        float_to_fixed(data.feelsLikeF, buffer2, "%3d");
+      }
+      strcpy(buffer3, "FEEL");
+      Serial.print(F("Buffer1: ")); Serial.println(buffer1);
+      Serial.print(F("Buffer2: ")); Serial.println(buffer2);
+      Serial.print(F("Buffer3: ")); Serial.println(buffer3);
+      break;
+      
+    case 2: // Temperature word and humidity
+      Serial.println(F("Case 2: Temperature word and humidity"));
+      strcpy(buffer1, data.tempWord);
       sprintf(buffer2, "%3d%%", (int)data.humidity);
       strcpy(buffer3, "HUM ");
+      Serial.print(F("Buffer1: ")); Serial.println(buffer1);
+      Serial.print(F("Buffer2: ")); Serial.println(buffer2);
+      Serial.print(F("Buffer3: ")); Serial.println(buffer3);
       break;
       
-    case 2: // Pressure
+    case 3: // Pressure
+      Serial.println(F("Case 3: Pressure"));
       sprintf(buffer1, "%4d", (int)data.pressure);
       strcpy(buffer2, "PRES");
       strcpy(buffer3, "HPA ");
+      Serial.print(F("Buffer1: ")); Serial.println(buffer1);
+      Serial.print(F("Buffer2: ")); Serial.println(buffer2);
+      Serial.print(F("Buffer3: ")); Serial.println(buffer3);
       break;
       
-    case 3: // Light level
+    case 4: // Light level
+      Serial.println(F("Case 4: Light level"));
       sprintf(buffer1, "%4.0f", data.lightLevel);
       strcpy(buffer2, "LITE");
       strcpy(buffer3, "LUX ");
+      Serial.print(F("Buffer1: ")); Serial.println(buffer1);
+      Serial.print(F("Buffer2: ")); Serial.println(buffer2);
+      Serial.print(F("Buffer3: ")); Serial.println(buffer3);
       break;
   }
   
@@ -290,10 +331,12 @@ void DisplayManager::displayRollingCurrent(SensorData data) {
   char displayText[13];
   sprintf(displayText, "%4s%4s%4s", buffer1, buffer2, buffer3);
   
-  Serial.print(F("Rolling display: "));
-  Serial.println(displayText);
+  Serial.print(F("Final display text: '"));
+  Serial.print(displayText);
+  Serial.println(F("'"));
   
   displayString(displayText);
+  Serial.println(F("=== ROLLING DISPLAY END ==="));
 }
 
 void DisplayManager::displayRollingHistorical() {

@@ -19,7 +19,7 @@ DataLogger dataLogger;
 LightingEffects lightingEffects;
 
 // System state
-DisplayMode currentDisplayMode = MODE_CLOCK;
+DisplayMode currentDisplayMode = MODE_ROLLING_CURRENT;  // Start in rolling mode for debugging
 bool settingsMode = false;
 SettingItem currentSetting = SETTING_TIME;
 
@@ -88,6 +88,18 @@ void setup() {
     
     delay(2000); // Show startup message
     
+    // Read sensors once at startup to initialize data
+    Serial.println(F("Reading initial sensor data..."));
+    if (sensors.readSensors()) {
+      Serial.println(F("Initial sensor read successful"));
+      SensorData initialData = sensors.getCurrentData();
+      Serial.print(F("Initial temp: "));
+      Serial.print(initialData.temperatureF);
+      Serial.println(F("F"));
+    } else {
+      Serial.println(F("WARNING: Initial sensor read failed"));
+    }
+    
     // Set initial display mode to ensure synchronization
     displayManager.setMode(currentDisplayMode);
   } else {
@@ -118,21 +130,44 @@ void loop() {
   // Always get current sensor data (or use last good reading)
   SensorData currentData = sensors.getCurrentData();
   
-  // Read sensors when needed
+  // Read sensors when needed and save real data
+  SensorData realData = currentData;  // Keep a copy of real sensor data
   if (sensors.isTimeToRead()) {
     if (sensors.readSensors()) {
       Serial.println(F("Sensors updated"));
-      currentData = sensors.getCurrentData();
+      realData = sensors.getCurrentData();  // Get fresh real data
+      
+      // Debug: Print real sensor data
+      Serial.print(F("REAL Temperature: "));
+      Serial.print(realData.temperature);
+      Serial.print(F("C, "));
+      Serial.print(realData.temperatureF);
+      Serial.println(F("F"));
+      Serial.print(F("REAL Feels like: "));
+      Serial.print(realData.feelsLikeF);
+      Serial.println(F("F"));
+      Serial.print(F("REAL Humidity: "));
+      Serial.print(realData.humidity);
+      Serial.println(F("%"));
+      Serial.print(F("REAL Pressure: "));
+      Serial.print(realData.pressure);
+      Serial.println(F(" hPa"));
+      Serial.print(F("REAL Light: "));
+      Serial.print(realData.lightLevel);
+      Serial.println(F(" lux"));
+      Serial.print(F("REAL Temp word: '"));
+      Serial.print(realData.tempWord);
+      Serial.println(F("'"));
       
       // Update data logger
-      dataLogger.update(currentData);
+      dataLogger.update(realData);
       
       // Update lighting effects
-      lightingEffects.update(currentData);
+      lightingEffects.update(realData);
       
       // Adjust lighting based on ambient light
-      lightingEffects.adjustBrightnessForAmbientLight(currentData.lightLevel);
-      displayManager.adjustBrightnessForAmbientLight(currentData.lightLevel);
+      lightingEffects.adjustBrightnessForAmbientLight(realData.lightLevel);
+      displayManager.adjustBrightnessForAmbientLight(realData.lightLevel);
       
       // Check for alerts
       checkWeatherAlerts();
@@ -141,6 +176,21 @@ void loop() {
       Serial.println(F("WARNING: Sensor read failed"));
     }
   }
+  
+  // DEBUGGING: Start with dummy data, then replace ONE real value at a time
+  currentData.temperatureF = realData.temperatureF;  // STEP 1: REAL TEMPERATURE ✅ WORKS
+  currentData.feelsLikeF = realData.feelsLikeF;      // STEP 3: REAL FEELS LIKE ✅ WORKS
+  strcpy(currentData.tempWord, realData.tempWord);   // STEP 2: REAL TEMP WORD ✅ WORKS
+  currentData.humidity = 45.0;                       // DUMMY - REAL HUMIDITY BREAKS DISPLAY!
+  currentData.pressure = 1013.0;                     // DUMMY
+  currentData.lightLevel = 150.0;                    // DUMMY
+  
+  Serial.print(F("DISPLAY DATA - Temp: "));
+  Serial.print(currentData.temperatureF);
+  Serial.print(F("F, FeelsLike: "));
+  Serial.print(currentData.feelsLikeF);
+  Serial.print(F("F, Word: "));
+  Serial.println(currentData.tempWord);
   
   // Update display every cycle (like hardware test does)
   if (displayManager.isTimeToUpdate()) {
