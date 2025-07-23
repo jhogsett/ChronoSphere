@@ -1,5 +1,10 @@
 #include <Arduino.h>
+#include <SPI.h>
 #include "AudioManager.h"
+
+// Constructor - initialize VS1053_MIDI with pin definitions
+AudioManager::AudioManager() : musicPlayer(VS1053_CS, VS1053_DCS, VS1053_DREQ, VS1053_RESET) {
+}
 
 // Westminster Chime sequence (first 4 notes of each quarter)
 const ChimeNote AudioManager::westminsterChime[] = {
@@ -17,10 +22,20 @@ const ChimeNote AudioManager::stMichaelsChime[] = {
 };
 
 bool AudioManager::init() {
-  // if (!musicPlayer.begin()) {  // Replace with your custom VS1053 init
-  //   Serial.println(F("VS1053 initialization failed"));
-  //   return false;
-  // }
+  // Initialize SPI first (exactly like working example)
+  SPI.begin();
+  SPI.setClockDivider(SPI_CLOCK_DIV16);
+  
+  // Initialize VS1053 MIDI player with MIDI plugin (exactly like working example)
+  if (!musicPlayer.begin(true)) {
+    Serial.println(F("VS1053 initialization failed"));
+    return false;
+  }
+  
+  Serial.println(F("✓ VS1053_MIDI initialized successfully!"));
+  Serial.print(F("Plugin size: "));
+  Serial.print(musicPlayer.getPluginSize());
+  Serial.println(F(" words"));
   
   // Set default settings
   currentChimeType = CHIME_WESTMINSTER;
@@ -30,13 +45,12 @@ bool AudioManager::init() {
   isPlaying = false;
   playStartTime = 0;
   
-  // Set volume (0-100)
-  // musicPlayer.setVolume(50, 50);  // Replace with your custom VS1053 volume control
+  // Set master volume (exactly like working example)
+  musicPlayer.setMasterVolume(0x20, 0x20);
   
-  // Set MIDI mode and select instrument
-  // musicPlayer.switchToMidiMode();  // Replace with your custom VS1053 MIDI setup
-  // musicPlayer.midiSetChannelBank(0, VS1053_BANK_MELODY);
-  // musicPlayer.midiSetInstrument(0, currentInstrument);
+  // Set instrument on channel 0 (exactly like working example)
+  musicPlayer.setInstrument(0, currentInstrument);
+  delay(100);
   
   Serial.println(F("Audio manager initialized"));
   return true;
@@ -56,8 +70,8 @@ void AudioManager::checkAndPlayChime(DateTime currentTime) {
   static int lastChimeMinute = -1;
   static int lastChimeHour = -1;
   
-  int currentMinute = currentTime.minute();
-  int currentHour = currentTime.hour();
+  int currentMinute = currentTime.getMinute();
+  int currentHour = currentTime.getHour();
   
   bool shouldChime = false;
   
@@ -89,9 +103,9 @@ void AudioManager::checkAndPlayChime(DateTime currentTime) {
 void AudioManager::playNote(uint8_t note, uint8_t velocity, uint16_t duration) {
   if (isPlaying) return;
   
-  // musicPlayer.midiNoteOn(0, note, velocity);   // Replace with your custom VS1053 note on
+  musicPlayer.noteOn(0, note, velocity);
   delay(duration * 250); // Quarter note = 250ms
-  // musicPlayer.midiNoteOff(0, note, velocity);  // Replace with your custom VS1053 note off
+  musicPlayer.noteOff(0, note, velocity);
 }
 
 void AudioManager::playChimeSequence(const ChimeNote* sequence, uint8_t length) {
@@ -157,7 +171,7 @@ void AudioManager::setChimeType(ChimeType type) {
 
 void AudioManager::setChimeInstrument(MidiInstrument instrument) {
   currentInstrument = instrument;
-  // musicPlayer.midiSetInstrument(0, instrument);  // Replace with your custom VS1053 instrument selection
+  musicPlayer.setInstrument(0, instrument);
 }
 
 void AudioManager::setChimeFrequency(uint8_t frequency) {
@@ -220,9 +234,9 @@ uint8_t AudioManager::getChimeFrequency() {
 
 void AudioManager::stopPlaying() {
   // Stop all MIDI notes
-  // for (int i = 0; i < 128; i++) {
-  //   musicPlayer.midiNoteOff(0, i, 0);  // Replace with your custom VS1053 note off
-  // }
+  for (int i = 0; i < 128; i++) {
+    musicPlayer.noteOff(0, i, 0);
+  }
   isPlaying = false;
 }
 
@@ -231,5 +245,5 @@ bool AudioManager::isBusy() {
 }
 
 void AudioManager::setVolume(uint8_t volume) {
-  // musicPlayer.setVolume(volume, volume);  // Replace with your custom VS1053 volume control
+  musicPlayer.setVolume(0, volume);  // Channel 0, volume 0-127
 }

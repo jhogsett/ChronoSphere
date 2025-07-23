@@ -1,13 +1,13 @@
 #ifndef DISPLAY_MANAGER_H
 #define DISPLAY_MANAGER_H
 
-#include <Adafruit_LEDBackpack.h>
+#include "HT16K33Disp.h"
 #include "Config.h"
 #include "Sensors.h"
 
 class DisplayManager {
 private:
-  Adafruit_AlphaNum4 displays[3];  // Green, Amber, Red
+  HT16K33Disp* displayGroup;  // Single object managing all 3 displays
   
   unsigned long lastUpdateTime;
   DisplayMode currentMode;
@@ -15,7 +15,9 @@ private:
   unsigned long rollingTimer;
   
   void clearAllDisplays();
-  void displayOnModule(uint8_t module, const char* text);
+  void displayOnModule(uint8_t module, const char* text); // Deprecated - for compatibility
+  void displayString(const char* text);
+  void displayScrollingString(const char* text, int showDelay = 100, int scrollDelay = 100);
   void displayTime(DateTime time);
   void displayDate(DateTime time);
   void displayTemperature(SensorData data);
@@ -24,6 +26,9 @@ private:
   void displayRollingHistorical();
   void displayRollingTrends();
   void displaySettings();
+  void displaySettingsMenu(SettingItem currentSetting);
+  void displaySettingsInterface(SettingItem currentSetting, int settingTimeComponent, 
+                                int settingDateComponent, DateTime pendingDateTime);
   
   // Utility functions
   void formatTime(DateTime time, char* buffer);
@@ -33,9 +38,16 @@ private:
 public:
   bool init();
   void update(SensorData sensorData);
+  void updateSettings(SensorData sensorData, bool settingsMode, SettingItem currentSetting, 
+                      int settingTimeComponent, int settingDateComponent, DateTime pendingDateTime, 
+                      bool editingSettingValue);
   void setMode(DisplayMode mode);
   DisplayMode getCurrentMode();
   bool isTimeToUpdate();
+  
+  // Display methods
+  void displayTimeOnly(DateTime time);
+  void displayDateOnly(DateTime time);
   
   // Brightness control
   void setBrightness(uint8_t brightness);

@@ -2,22 +2,28 @@
 #include "Sensors.h"
 #include <math.h>
 
-Sensors::Sensors() : bmp280(&Wire, DFRobot_BMP280_IIC::eSdoLow) {
+Sensors::Sensors() : bmp280(&Wire, BMP::eSdoLow) {
   // Constructor initializes BMP280 with I2C (SDA/SCL pins, SDO pulled low)
 }
 
 bool Sensors::init() {
-  // Initialize RTC
-  if (!rtc.begin()) {
+  // Initialize DS3231 RTC
+  Wire.begin(); // DS3231 requires Wire to be initialized
+  
+  // The DS3231 library doesn't have a begin() method like RTClib
+  // We'll check if we can read from it instead
+  bool century = false;
+  bool h12Flag;
+  bool pm;
+  
+  // Try to read the year as a test
+  uint8_t year = rtc.getYear();
+  if (year > 99) { // Invalid year suggests RTC not working
     Serial.println(F("RTC initialization failed"));
     return false;
   }
   
-  // Check if RTC lost power and set time if needed
-  if (rtc.lostPower()) {
-    Serial.println(F("RTC lost power, setting time"));
-    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
-  }
+  Serial.println(F("DS3231 RTC initialized successfully"));
   
   // Initialize AHT21 temperature/humidity sensor
   if (!aht.begin()) {
@@ -25,11 +31,31 @@ bool Sensors::init() {
     return false;
   }
   
-  // Initialize BMP280 pressure sensor
-  if (!bmp280.begin()) {
+  // Initialize BMP280 pressure sensor (using exact working API)
+  bmp280.reset();
+  Serial.println("BMP280 initialization test");
+  
+  while(bmp280.begin() != BMP::eStatusOK) {
+    Serial.println("BMP280 begin failed");
+    switch(bmp280.lastOperateStatus) {
+      case BMP::eStatusOK: Serial.println("everything ok"); break;
+      case BMP::eStatusErr: Serial.println("unknown error"); break;
+      case BMP::eStatusErrDeviceNotDetected: Serial.println("device not detected"); break;
+      case BMP::eStatusErrParameter: Serial.println("parameter error"); break;
+      default: Serial.println("unknown status"); break;
+    }
     Serial.println(F("DFRobot BMP280 IIC initialization failed"));
     return false;
   }
+  
+  Serial.println("BMP280 begin success");
+  
+  // Configure sensor exactly like working example
+  bmp280.setConfigFilter(BMP::eConfigFilter_off);
+  bmp280.setConfigTStandby(BMP::eConfigTStandby_125);
+  bmp280.setCtrlMeasSamplingTemp(BMP::eSampling_X8);
+  bmp280.setCtrlMeasSamplingPress(BMP::eSampling_X8);
+  bmp280.setCtrlMeasMode(BMP::eCtrlMeasModeNormal);
   
   // Initialize BH1750 light sensor
   if (!lightMeter.begin()) {
@@ -44,8 +70,20 @@ bool Sensors::init() {
 }
 
 bool Sensors::readSensors() {
-  // Read RTC
-  currentData.currentTime = rtc.now();
+  // Read DS3231 RTC - get current time directly
+  bool century = false;
+  bool h12Flag;
+  bool pm;
+  
+  // Create DateTime from individual components
+  int year = 2000 + rtc.getYear(); // DS3231 returns 2-digit year
+  int month = rtc.getMonth(century);
+  int day = rtc.getDate();
+  int hour = rtc.getHour(h12Flag, pm);
+  int minute = rtc.getMinute();
+  int second = rtc.getSecond();
+  
+  currentData.currentTime = DateTime(year, month, day, hour, minute, second);
   
   // Read AHT21
   sensors_event_t humidity, temp;
@@ -158,7 +196,15 @@ uint8_t Sensors::getDisplayColor(float feelsLikeF) {
 }
 
 bool Sensors::setDateTime(DateTime newDateTime) {
-  rtc.adjust(newDateTime);
+  // Convert 4-digit year to 2-digit for DS3231
+  int year2digit = newDateTime.getYear() - 2000;
+  
+  rtc.setYear(year2digit);
+  rtc.setMonth(newDateTime.getMonth());
+  rtc.setDate(newDateTime.getDay());
+  rtc.setHour(newDateTime.getHour());
+  rtc.setMinute(newDateTime.getMinute());
+  rtc.setSecond(newDateTime.getSecond());
   return true;
 }
 

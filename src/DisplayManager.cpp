@@ -1,22 +1,31 @@
 #include <Arduino.h>
 #include "DisplayManager.h"
+#include <HT16K33Disp.h>
 #include <stdio.h>
 #include <string.h>  // For strcpy
 
+// Helper function for formatting floats for display (from reference\smart_thermo3.ino)
+void float_to_fixed(float value, char *buffer, const char *pattern, byte decimals=1){
+  int split = 10 * decimals;
+  int ivalue = int(value * split);
+  int valuei = ivalue / split;
+  int valued = ivalue % split;
+  sprintf(buffer, pattern, valuei, valued);
+}
+
 bool DisplayManager::init() {
-  // Initialize all three display modules
-  for (int i = 0; i < 3; i++) {
-    uint8_t address = DISPLAY_GREEN_ADDRESS + i;
-    if (!displays[i].begin(address)) {
-      Serial.print(F("Display "));
-      Serial.print(i);
-      Serial.println(F(" initialization failed"));
-      return false;
-    }
-    displays[i].setBrightness(8); // Medium brightness
-    displays[i].clear();
-    displays[i].writeDisplay();
-  }
+  // Initialize single display group managing all 3 displays
+  // Different brightness levels needed due to LED color variations
+  byte brightnessLevels[3] = {
+    DISPLAY_GREEN_BRIGHTNESS, 
+    DISPLAY_AMBER_BRIGHTNESS, 
+    DISPLAY_RED_BRIGHTNESS
+  }; // Green, Amber, Red
+  
+  // Create single display object managing 3 displays starting at 0x70
+  displayGroup = new HT16K33Disp(DISPLAY_GREEN_ADDRESS, 3);
+  displayGroup->init(brightnessLevels);
+  displayGroup->clear();
   
   currentMode = MODE_CLOCK;
   lastUpdateTime = 0;
@@ -56,8 +65,31 @@ void DisplayManager::update(SensorData sensorData) {
     case MODE_SETTINGS:
       displaySettings();
       break;
+      
+    default:
+      // Debug: Show unexpected mode
+      char modeText[13];
+      sprintf(modeText, "MODE ERR %03d", currentMode);
+      displayString(modeText);
+      break;
   }
   
+  lastUpdateTime = millis();
+}
+
+void DisplayManager::updateSettings(SensorData sensorData, bool settingsMode, SettingItem currentSetting, 
+                                     int settingTimeComponent, int settingDateComponent, DateTime pendingDateTime,
+                                     bool editingSettingValue) {
+  if (settingsMode) {
+    if (editingSettingValue) {
+      displaySettingsInterface(currentSetting, settingTimeComponent, settingDateComponent, pendingDateTime);
+    } else {
+      displaySettingsMenu(currentSetting);
+    }
+  } else {
+    // Normal display update
+    update(sensorData);
+  }
   lastUpdateTime = millis();
 }
 
@@ -66,142 +98,399 @@ bool DisplayManager::isTimeToUpdate() {
 }
 
 void DisplayManager::clearAllDisplays() {
-  for (int i = 0; i < 3; i++) {
-    displays[i].clear();
-  }
+  displayGroup->clear();
 }
 
 void DisplayManager::displayOnModule(uint8_t module, const char* text) {
-  if (module > 2) return;
+  // For backward compatibility: position text at specific 4-character segment
+  // Module 0 = chars 0-3, Module 1 = chars 4-7, Module 2 = chars 8-11
+  char displayText[13] = "            "; // 12 spaces
   
-  displays[module].clear();
-  for (int i = 0; i < 4 && text[i] != '\0'; i++) {
-    displays[module].writeDigitAscii(i, text[i]);
+  if (module <= 2) {
+    int startPos = module * 4;
+    // Copy up to 4 characters to the appropriate position
+    for (int i = 0; i < 4 && text[i] != '\0'; i++) {
+      displayText[startPos + i] = text[i];
+    }
   }
-  displays[module].writeDisplay();
+  
+  displayGroup->show_string(displayText);
+}
+
+void DisplayManager::displayString(const char* text) {
+  displayGroup->show_string(text);
+}
+
+void DisplayManager::displayScrollingString(const char* text, int showDelay, int scrollDelay) {
+  displayGroup->scroll_string(text, showDelay, scrollDelay);
 }
 
 void DisplayManager::displayTime(DateTime time) {
-  char timeStr[5];
-  char dateStr[5];
+  char displayText[13];
   
-  formatTime(time, timeStr);
-  formatDate(time, dateStr);
+  // Format time: 4 digits with leading space instead of zero (positions 0-3)
+  int hour = time.getHour();
+  if (hour == 0) hour = 12;
+  if (hour > 12) hour -= 12;
   
-  // Display time on green, date on amber
-  displayOnModule(0, timeStr);  // Green
-  displayOnModule(1, dateStr);  // Amber
-  displayOnModule(2, "    ");   // Red - blank
+  // Format date: month in positions 6-7, day in positions 9-10
+  int month = time.getMonth();
+  int day = time.getDay();
+  
+  // Create 12-character string: "HHMM  MM DD  "
+  //                            0123456789AB
+  if (hour < 10) {
+    sprintf(displayText, " %d%02d  %2d %02d  ", hour, time.getMinute(), month, day);
+  } else {
+    sprintf(displayText, "%d%02d  %2d %02d  ", hour, time.getMinute(), month, day);
+  }
+  
+  Serial.print(F("Clock display: "));
+  Serial.println(displayText);
+  
+  displayString(displayText);
 }
 
-void DisplayManager::displayDate(DateTime time) {
-  char buffer[5];
-  sprintf(buffer, "%02d%02d", time.month(), time.day());
-  displayOnModule(1, buffer);
+void DisplayManager::displayTimeOnly(DateTime time) {
+  char displayText[13];
+  
+  // Format time: "  HH MM SS  " - center-justified with colors
+  // GREEN: HH, AMBER: MM, RED: SS
+  int hour = time.getHour();
+  if (hour == 0) hour = 12;
+  if (hour > 12) hour -= 12;
+  
+  // Create 12-character string: "  HH MM SS  "
+  //                            0123456789AB
+  sprintf(displayText, "  %2d %02d %02d  ", hour, time.getMinute(), time.getSecond());
+  
+  displayString(displayText);
+}
+
+void DisplayManager::displayDateOnly(DateTime time) {
+  char displayText[13];
+  
+  // Format date: "  MM DD YYYY" - using all three colors
+  // GREEN: MM, AMBER: DD, RED: YYYY
+  int month = time.getMonth();
+  int day = time.getDay();
+  int year = time.getYear();
+  
+  // Create 12-character string: "  MM DD YYYY"
+  //                            0123456789AB
+  sprintf(displayText, "  %2d %02d %4d", month, day, year);
+  
+  displayString(displayText);
+}
+
+void DisplayManager::formatTime(DateTime time, char* buffer) {
+  int hour = time.getHour();
+  if (hour == 0) hour = 12;
+  if (hour > 12) hour -= 12;
+  
+  // Format as 4 digits with leading space for single digit hours
+  if (hour < 10) {
+    sprintf(buffer, " %d%02d", hour, time.getMinute());
+  } else {
+    sprintf(buffer, "%d%02d", hour, time.getMinute());
+  }
+}
+
+void DisplayManager::formatDate(DateTime time, char* buffer) {
+  sprintf(buffer, "%02d/%02d", time.getMonth(), time.getDay());
 }
 
 void DisplayManager::displayTemperature(SensorData data) {
-  char tempStr[5];
-  char feelsStr[5];
+  char displayText[13];
+  char tempStr[5];   // For temperature string like "75.0" 
+  char feelsStr[5];  // For feels like string like "78.0"
   
-  // Raw temperature on green
-  sprintf(tempStr, "%3.1f", data.temperatureF);
-  displayOnModule(0, tempStr);
+  // Create 12-character string with 4-char segments: "TTTT FFFF WWWW"
+  // Characters 0-3 (GREEN): Temperature (e.g. "75.0")  
+  // Characters 4-7 (AMBER): Feels like (e.g. "78.0")
+  // Characters 8-11 (RED): Temperature word (e.g. "WARM")
   
-  // Feels like on amber
-  sprintf(feelsStr, "%3d", (int)data.feelsLikeF);
-  displayOnModule(1, feelsStr);
+  // Format temperature using float_to_fixed like in reference code
+  if(data.temperatureF < 100.0){
+    float_to_fixed(data.temperatureF, tempStr, "%2d.%1d");
+  } else {
+    float_to_fixed(data.temperatureF, tempStr, "%3d");  // No decimal for 100+
+  }
   
-  // Four-letter word on appropriate color display
-  displayOnModule(data.displayColor, data.tempWord);
+  // Format feels like temperature  
+  if(data.feelsLikeF < 100.0){
+    float_to_fixed(data.feelsLikeF, feelsStr, "%2d.%1d");
+  } else {
+    float_to_fixed(data.feelsLikeF, feelsStr, "%3d");  // No decimal for 100+
+  }
+  
+  // Combine into 12-character display string
+  sprintf(displayText, "%4s %4s%-4s", tempStr, feelsStr, data.tempWord);
+  
+  displayString(displayText);
 }
 
 void DisplayManager::displayWeatherSummary(SensorData data) {
-  char tempStr[5];
-  char humStr[5];
-  char pressStr[5];
+  char displayText[13];
+  char tempStr[5];     // For temperature like "79.0"
+  char humidStr[5];    // For humidity like "45.0"
+  char pressStr[5];    // For pressure like "1013"
   
-  sprintf(tempStr, "%3d", (int)data.temperatureF);
-  sprintf(humStr, "%3d%%", (int)data.humidity);
-  sprintf(pressStr, "%4.0f", data.pressure);
+  // Create 12-character string: "TTTT HHHH PPPP"
+  // Characters 0-3 (GREEN): Temperature (e.g. "79.0")
+  // Characters 4-7 (AMBER): Humidity (e.g. "45.0")
+  // Characters 8-11 (RED): Pressure (e.g. "1013")
   
-  displayOnModule(0, tempStr);   // Green
-  displayOnModule(1, humStr);    // Amber  
-  displayOnModule(2, pressStr);  // Red
+  // Format temperature 
+  if(data.temperatureF < 100.0){
+    float_to_fixed(data.temperatureF, tempStr, "%2d.%1d");
+  } else {
+    float_to_fixed(data.temperatureF, tempStr, "%3d");
+  }
+  
+  // Format humidity (usually no decimals needed for humidity)
+  sprintf(humidStr, "%3d%%", (int)data.humidity);
+  
+  // Format pressure as integer (avoid float formatting issues)
+  sprintf(pressStr, "%4d", (int)data.pressure);
+  
+  sprintf(displayText, "%4s%4s%4s", tempStr, humidStr, pressStr);
+  
+  displayString(displayText);
 }
 
 void DisplayManager::displayRollingCurrent(SensorData data) {
+  Serial.println(F("=== ROLLING DISPLAY START ==="));
   unsigned long currentTime = millis();
+  
+  Serial.print(F("Current time: "));
+  Serial.println(currentTime);
+  Serial.print(F("Rolling timer: "));
+  Serial.println(rollingTimer);
+  Serial.print(F("Time diff: "));
+  Serial.println(currentTime - rollingTimer);
   
   // Change display every 3 seconds
   if (currentTime - rollingTimer > 3000) {
     rollingTimer = currentTime;
-    rollingIndex = (rollingIndex + 1) % 4;
+    rollingIndex = (rollingIndex + 1) % 5;
+    Serial.print(F("Rolling index changed to: "));
+    Serial.println(rollingIndex);
   }
   
-  char buffer1[5], buffer2[5], buffer3[5];
+  Serial.print(F("Current rolling index: "));
+  Serial.println(rollingIndex);
+  
+  char buffer1[10], buffer2[10], buffer3[10];
   
   switch (rollingIndex) {
-    case 0: // Time and temperature
+    case 0: // Time and actual temperature
+      Serial.println(F("Case 0: Time and actual temperature"));
       formatTime(data.currentTime, buffer1);
-      sprintf(buffer2, "%3d", (int)data.temperatureF);
-      strcpy(buffer3, data.tempWord);
+      if(data.temperatureF < 100.0){
+        float_to_fixed(data.temperatureF, buffer2, "%2d.%1d");
+      } else {
+        float_to_fixed(data.temperatureF, buffer2, "%3d");
+      }
+      strcpy(buffer3, "TEMP");
+      Serial.print(F("Buffer1: ")); Serial.println(buffer1);
+      Serial.print(F("Buffer2: ")); Serial.println(buffer2);
+      Serial.print(F("Buffer3: ")); Serial.println(buffer3);
       break;
       
-    case 1: // Date and humidity
+    case 1: // Date and feels-like temperature
+      Serial.println(F("Case 1: Date and feels-like temperature"));
       formatDate(data.currentTime, buffer1);
-      sprintf(buffer2, "%3d%%", (int)data.humidity);
-      strcpy(buffer3, "HUM ");
+      if(data.feelsLikeF < 100.0){
+        float_to_fixed(data.feelsLikeF, buffer2, "%2d.%1d");
+      } else {
+        float_to_fixed(data.feelsLikeF, buffer2, "%3d");
+      }
+      strcpy(buffer3, "FEEL");
+      Serial.print(F("Buffer1: ")); Serial.println(buffer1);
+      Serial.print(F("Buffer2: ")); Serial.println(buffer2);
+      Serial.print(F("Buffer3: ")); Serial.println(buffer3);
       break;
       
-    case 2: // Pressure
-      sprintf(buffer1, "%4.0f", data.pressure);
+    case 2: // Temperature word and humidity
+      Serial.println(F("Case 2: Temperature word and humidity"));
+      strcpy(buffer1, data.tempWord);
+      
+      // DEBUG: Show humidity formatting process
+      Serial.print(F("DEBUG: Raw humidity float: "));
+      Serial.println(data.humidity);
+      Serial.print(F("DEBUG: Cast to int: "));
+      Serial.println((int)data.humidity);
+      
+      sprintf(buffer2, "%3d%%", (int)data.humidity);
+      
+      Serial.print(F("DEBUG: Formatted humidity string: '"));
+      Serial.print(buffer2);
+      Serial.print(F("' (length: "));
+      Serial.print(strlen(buffer2));
+      Serial.println(F(")"));
+      
+      strcpy(buffer3, "HUM ");
+      Serial.print(F("Buffer1: ")); Serial.println(buffer1);
+      Serial.print(F("Buffer2: ")); Serial.println(buffer2);
+      Serial.print(F("Buffer3: ")); Serial.println(buffer3);
+      break;
+      
+    case 3: // Pressure
+      Serial.println(F("Case 3: Pressure"));
+      sprintf(buffer1, "%4d", (int)data.pressure);
       strcpy(buffer2, "PRES");
       strcpy(buffer3, "HPA ");
+      Serial.print(F("Buffer1: ")); Serial.println(buffer1);
+      Serial.print(F("Buffer2: ")); Serial.println(buffer2);
+      Serial.print(F("Buffer3: ")); Serial.println(buffer3);
       break;
       
-    case 3: // Light level
+    case 4: // Light level
+      Serial.println(F("Case 4: Light level"));
       sprintf(buffer1, "%4.0f", data.lightLevel);
       strcpy(buffer2, "LITE");
       strcpy(buffer3, "LUX ");
+      Serial.print(F("Buffer1: ")); Serial.println(buffer1);
+      Serial.print(F("Buffer2: ")); Serial.println(buffer2);
+      Serial.print(F("Buffer3: ")); Serial.println(buffer3);
       break;
   }
   
-  displayOnModule(0, buffer1);
-  displayOnModule(1, buffer2);
-  displayOnModule(2, buffer3);
+  // Combine into single 12-character string for unified display
+
+  Serial.println("\r\n\r\n\r\n\r\n\r\n");
+  Serial.print("|");
+  Serial.print(buffer1);
+  Serial.println("|");
+  Serial.print("|");
+  Serial.print(buffer2);
+  Serial.println("|");
+  Serial.print("|");
+  Serial.print(buffer3);
+  Serial.println("|");
+  Serial.println("\r\n\r\n\r\n\r\n\r\n");
+
+  char displayText[20];
+  sprintf(displayText, "%4s%4s%4s", buffer1, buffer2, buffer3);
+  
+  Serial.print(F("Final display text: '"));
+  Serial.print(displayText);
+  Serial.println(F("'"));
+  
+  displayString(displayText);
+  Serial.println(F("=== ROLLING DISPLAY END ==="));
 }
 
 void DisplayManager::displayRollingHistorical() {
-  // Placeholder - would display historical data
-  displayOnModule(0, "HIST");
-  displayOnModule(1, "ORICAL");
-  displayOnModule(2, "DATA");
+  // Placeholder - would display historical data using unified 12-character display
+  displayString("HIST ORICAL DATA");
 }
 
 void DisplayManager::displayRollingTrends() {
-  // Placeholder - would display trend data
-  displayOnModule(0, "TREN");
-  displayOnModule(1, "DING");
-  displayOnModule(2, "DATA");
+  // Placeholder - would display trend data using unified 12-character display  
+  displayString("TRENDING DATA");
 }
 
 void DisplayManager::displaySettings() {
-  displayOnModule(0, "SETT");
-  displayOnModule(1, "INGS");
-  displayOnModule(2, "MODE");
+  displayString("SETTINGS MODE");
 }
 
-void DisplayManager::formatTime(DateTime time, char* buffer) {
-  int hour = time.hour();
-  if (hour == 0) hour = 12;
-  if (hour > 12) hour -= 12;
+void DisplayManager::displaySettingsMenu(SettingItem currentSetting) {
+  char displayText[13];
   
-  sprintf(buffer, "%2d%02d", hour, time.minute());
+  switch (currentSetting) {
+    case SETTING_TIME:
+      sprintf(displayText, "SET TIME    ");
+      break;
+    case SETTING_DATE:
+      sprintf(displayText, "SET DATE    ");
+      break;
+    case SETTING_CHIME_TYPE:
+      sprintf(displayText, "CHIME TYPE  ");
+      break;
+    case SETTING_CHIME_INSTRUMENT:
+      sprintf(displayText, "CHIME INST  ");
+      break;
+    case SETTING_CHIME_FREQUENCY:
+      sprintf(displayText, "CHIME FREQ  ");
+      break;
+    case SETTING_EXIT:
+      sprintf(displayText, "EXIT        ");
+      break;
+    default:
+      sprintf(displayText, "SETTING %03d ", (int)currentSetting);
+      break;
+  }
+  
+  displayString(displayText);
 }
 
-void DisplayManager::formatDate(DateTime time, char* buffer) {
-  sprintf(buffer, "%02d%02d", time.month(), time.day());
+void DisplayManager::displaySettingsInterface(SettingItem currentSetting, int settingTimeComponent, 
+                                               int settingDateComponent, DateTime pendingDateTime) {
+  char displayText[13];
+  
+  switch (currentSetting) {
+    case SETTING_TIME:
+      {
+        char timeStr[9];  // "HH:MM:SS"
+        sprintf(timeStr, "%02d:%02d:%02d", pendingDateTime.getHour(), 
+                pendingDateTime.getMinute(), pendingDateTime.getSecond());
+        
+        // Show which component is being edited
+        switch (settingTimeComponent) {
+          case 0: // Hour
+            sprintf(displayText, "H%s", timeStr);
+            break;
+          case 1: // Minute  
+            sprintf(displayText, "M%s", timeStr);
+            break;
+          case 2: // Second
+            sprintf(displayText, "S%s", timeStr);
+            break;
+        }
+      }
+      break;
+      
+    case SETTING_DATE:
+      {
+        char dateStr[9];  // "MM/DD/YY"
+        sprintf(dateStr, "%02d/%02d/%02d", pendingDateTime.getMonth(), 
+                pendingDateTime.getDay(), pendingDateTime.getYear() % 100);
+        
+        // Show which component is being edited
+        switch (settingDateComponent) {
+          case 0: // Month
+            sprintf(displayText, "MO%s", dateStr);
+            break;
+          case 1: // Day
+            sprintf(displayText, "DY%s", dateStr);
+            break;
+          case 2: // Year
+            sprintf(displayText, "YR%s", dateStr);
+            break;
+        }
+      }
+      break;
+      
+    case SETTING_CHIME_TYPE:
+      sprintf(displayText, "CHIME TYPE  ");
+      break;
+      
+    case SETTING_CHIME_INSTRUMENT:
+      sprintf(displayText, "CHIME INST  ");
+      break;
+      
+    case SETTING_CHIME_FREQUENCY:
+      sprintf(displayText, "CHIME FREQ  ");
+      break;
+      
+    default:
+      sprintf(displayText, "SETTING %03d ", (int)currentSetting);
+      break;
+  }
+  
+  displayString(displayText);
 }
 
 void DisplayManager::formatFloat(float value, char* buffer, uint8_t decimals) {
@@ -225,10 +514,23 @@ DisplayMode DisplayManager::getCurrentMode() {
   return currentMode;
 }
 
-void DisplayManager::setBrightness(uint8_t brightness) {
-  for (int i = 0; i < 3; i++) {
-    displays[i].setBrightness(brightness);
-  }
+void DisplayManager::setBrightness(uint8_t baseBrightness) {
+  // Apply color compensation to maintain consistent apparent brightness
+  byte compensatedBrightness[3];
+  
+  // Calculate compensated brightness maintaining the ratios: Green=1, Amber=9, Red=15
+  // Base ratios: Green=0.067, Amber=0.6, Red=1.0 (relative to red)
+  compensatedBrightness[0] = (baseBrightness * 1 + 7) / 15;  // Green: scale to 1/15 of red
+  compensatedBrightness[1] = (baseBrightness * 9 + 7) / 15;  // Amber: scale to 9/15 of red  
+  compensatedBrightness[2] = baseBrightness;                 // Red: unchanged
+  
+  // Ensure minimum brightness of 1
+  if (compensatedBrightness[0] < 1) compensatedBrightness[0] = 1;
+  if (compensatedBrightness[1] < 1) compensatedBrightness[1] = 1;
+  if (compensatedBrightness[2] < 1) compensatedBrightness[2] = 1;
+  
+  // Re-initialize display group with new brightness
+  displayGroup->init(compensatedBrightness);
 }
 
 void DisplayManager::adjustBrightnessForAmbientLight(float lightLevel) {
@@ -250,28 +552,19 @@ void DisplayManager::adjustBrightnessForAmbientLight(float lightLevel) {
 }
 
 void DisplayManager::showStartupMessage() {
-  displayOnModule(0, "WEAT");
-  displayOnModule(1, "HER ");
-  displayOnModule(2, "CLOK");
-  
+  displayString("WEATHER CLOK");
   delay(1000);
-  
-  displayOnModule(0, "INIT");
-  displayOnModule(1, "IALIZ");
-  displayOnModule(2, "ING ");
+  displayString("INITIALIZING");
 }
 
 void DisplayManager::showError(const char* errorCode) {
-  displayOnModule(0, "ERR ");
-  displayOnModule(1, errorCode);
-  displayOnModule(2, "FAIL");
+  char errorText[13];
+  sprintf(errorText, "ERR %-4s FAIL", errorCode);
+  displayString(errorText);
 }
 
 void DisplayManager::showSetting(SettingItem setting, int value) {
-  char valueStr[5];
-  sprintf(valueStr, "%4d", value);
-  
-  displayOnModule(0, "SET ");
-  displayOnModule(1, valueStr);
-  displayOnModule(2, "TING");
+  char settingText[13];
+  sprintf(settingText, "SET %4d TING", value);
+  displayString(settingText);
 }

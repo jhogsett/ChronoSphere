@@ -156,8 +156,8 @@ void LightingEffects::updateClockIndicator(DateTime time) {
   clear();
   
   // Light up pixels to indicate time
-  int hourPixel = (time.hour() % 12) * strip.numPixels() / 12;
-  int minutePixel = time.minute() * strip.numPixels() / 60;
+  int hourPixel = (time.getHour() % 12) * strip.numPixels() / 12;
+  int minutePixel = time.getMinute() * strip.numPixels() / 60;
   
   // Hour indicator (red)
   strip.setPixelColor(hourPixel, strip.Color(255, 0, 0));

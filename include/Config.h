@@ -5,15 +5,18 @@
 #define ROTARY_CLK_PIN 2
 #define ROTARY_DT_PIN 3
 #define ROTARY_SW_PIN 4
-#define STEPPER_PIN1 5
-#define STEPPER_PIN2 6
-#define STEPPER_PIN3 7
-#define STEPPER_PIN4 8
-#define SERVO_PIN 9
-#define VS1053_CS 10
-#define VS1053_DCS 11
-#define VS1053_DREQ 12
-#define NEOPIXEL_PIN 13
+#define STEPPER_PIN1 14
+#define STEPPER_PIN2 15
+#define STEPPER_PIN3 16
+#define STEPPER_PIN4 17
+#define SERVO_PIN 5
+#define NEOPIXEL_PIN 6
+#define VS1053_CS 10    // Command interface
+#define VS1053_DCS 9    // Data interface
+#define VS1053_RESET 8  // Reset pin
+#define VS1053_DREQ 7   // Data request pin
+// IC2 reserved A4 A5
+// SPI reserved 13 12 11
 #define NEOPIXEL_COUNT 8  // Reduced from 12 to 8 to save RAM
 
 // I2C Addresses
@@ -24,6 +27,11 @@
 #define DISPLAY_GREEN_ADDRESS 0x70
 #define DISPLAY_AMBER_ADDRESS 0x71
 #define DISPLAY_RED_ADDRESS 0x72
+
+// Display Brightness Compensation (compensates for LED color variations)
+#define DISPLAY_GREEN_BRIGHTNESS 1   // Green LEDs are very bright
+#define DISPLAY_AMBER_BRIGHTNESS 9   // Amber LEDs are medium brightness
+#define DISPLAY_RED_BRIGHTNESS 15    // Red LEDs are dim
 
 // Timing Constants
 #define STEPPER_STEPS_PER_HOUR 2048
@@ -92,7 +100,8 @@ enum SettingItem {
   SETTING_SENSOR_SENSITIVITY,
   SETTING_WEATHER_ALERTS,
   SETTING_LIGHTING_EFFECTS,
-  SETTING_MOTOR_SETTINGS
+  SETTING_MOTOR_SETTINGS,
+  SETTING_EXIT
 };
 
 #endif
