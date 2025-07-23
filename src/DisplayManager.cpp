@@ -6,11 +6,17 @@
 
 // Helper function for formatting floats for display (from reference\smart_thermo3.ino)
 void float_to_fixed(float value, char *buffer, const char *pattern, byte decimals=1){
-  int split = 10 * decimals;
-  int ivalue = int(value * split);
-  int valuei = ivalue / split;
-  int valued = ivalue % split;
-  sprintf(buffer, pattern, valuei, valued);
+  if (decimals == 0) {
+    // Handle zero decimals case - just format as integer
+    int ivalue = int(value + 0.5);  // Round to nearest integer
+    sprintf(buffer, pattern, ivalue);
+  } else {
+    int split = 10 * decimals;
+    int ivalue = int(value * split);
+    int valuei = ivalue / split;
+    int valued = ivalue % split;
+    sprintf(buffer, pattern, valuei, valued);
+  }
 }
 
 bool DisplayManager::init() {
@@ -348,7 +354,22 @@ void DisplayManager::displayRollingCurrent(SensorData data) {
       
     case 4: // Light level
       Serial.println(F("Case 4: Light level"));
-      sprintf(buffer1, "%4.0f", data.lightLevel);
+      Serial.print(F("DEBUG: Raw lightLevel float: "));
+      Serial.println(data.lightLevel);
+      Serial.print(F("DEBUG: lightLevel is finite: "));
+      Serial.println(isfinite(data.lightLevel));
+      Serial.print(F("DEBUG: lightLevel is NaN: "));
+      Serial.println(isnan(data.lightLevel));
+      
+      // Use float_to_fixed with 0 decimals (now fixed to handle this case)
+      float_to_fixed(data.lightLevel, buffer1, "%4d", 0);  // 0 decimals for integer display
+      
+      Serial.print(F("DEBUG: Formatted lightLevel string: '"));
+      Serial.print(buffer1);
+      Serial.print(F("' (length: "));
+      Serial.print(strlen(buffer1));
+      Serial.println(F(")"));
+      
       strcpy(buffer2, "LITE");
       strcpy(buffer3, "LUX ");
       Serial.print(F("Buffer1: ")); Serial.println(buffer1);
@@ -384,16 +405,16 @@ void DisplayManager::displayRollingCurrent(SensorData data) {
 
 void DisplayManager::displayRollingHistorical() {
   // Placeholder - would display historical data using unified 12-character display
-  displayString("HIST ORICAL DATA");
+  displayString("History");
 }
 
 void DisplayManager::displayRollingTrends() {
   // Placeholder - would display trend data using unified 12-character display  
-  displayString("TRENDING DATA");
+  displayString("Trends");
 }
 
 void DisplayManager::displaySettings() {
-  displayString("SETTINGS MODE");
+  displayString("Settings");
 }
 
 void DisplayManager::displaySettingsMenu(SettingItem currentSetting) {
@@ -401,25 +422,25 @@ void DisplayManager::displaySettingsMenu(SettingItem currentSetting) {
   
   switch (currentSetting) {
     case SETTING_TIME:
-      sprintf(displayText, "SET TIME    ");
+      sprintf(displayText, "Set TIME    ");
       break;
     case SETTING_DATE:
-      sprintf(displayText, "SET DATE    ");
+      sprintf(displayText, "Set DATE    ");
       break;
     case SETTING_CHIME_TYPE:
-      sprintf(displayText, "CHIME TYPE  ");
+      sprintf(displayText, "Chime TYPE  ");
       break;
     case SETTING_CHIME_INSTRUMENT:
-      sprintf(displayText, "CHIME INST  ");
+      sprintf(displayText, "Chime INSTRU.");
       break;
     case SETTING_CHIME_FREQUENCY:
-      sprintf(displayText, "CHIME FREQ  ");
+      sprintf(displayText, "Chime FREQUE.");
       break;
     case SETTING_EXIT:
       sprintf(displayText, "EXIT        ");
       break;
     default:
-      sprintf(displayText, "SETTING %03d ", (int)currentSetting);
+      sprintf(displayText, "Setting %03d ", (int)currentSetting);
       break;
   }
   
@@ -552,9 +573,9 @@ void DisplayManager::adjustBrightnessForAmbientLight(float lightLevel) {
 }
 
 void DisplayManager::showStartupMessage() {
-  displayString("WEATHER CLOK");
+  displayString("ChronoSphere");
   delay(1000);
-  displayString("INITIALIZING");
+  // displayString("INITIALIZING");
 }
 
 void DisplayManager::showError(const char* errorCode) {
