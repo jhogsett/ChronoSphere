@@ -197,7 +197,8 @@ void loop() {
   strcpy(currentData.tempWord, realData.tempWord); 
   currentData.humidity = realData.humidity;          
   currentData.pressure = realData.pressure;        
-  currentData.lightLevel = realData.lightLevel;       
+  currentData.lightLevel = realData.lightLevel;
+  currentData.currentTime = realData.currentTime;  // IMPORTANT: Restore the real time!       
 
   // Serial.print(F("DISPLAY DATA - ALL DUMMY: Temp: "));
   // Serial.print(currentData.temperatureF);
@@ -286,6 +287,19 @@ void handleUserInput() {
       if (currentSetting == SETTING_EXIT) {
         // EXIT option selected - leave settings mode
         Serial.println(F("EXIT selected - leaving settings mode"));
+        
+        // Save any pending time/date changes before exiting
+        if (hasDateTimeChanges) {
+          sensors.setDateTime(pendingDateTime);
+          Serial.println(F("Final time/date saved to RTC on exit"));
+          
+          // Force immediate sensor read to update display with new time
+          Serial.println(F("Forcing sensor read to update display time..."));
+          sensors.readSensors();
+          
+          hasDateTimeChanges = false;
+        }
+        
         settingsMode = false;
         editingSettingValue = false;
       } else {
@@ -340,6 +354,11 @@ void handleUserInput() {
       if (hasDateTimeChanges) {
         sensors.setDateTime(pendingDateTime);
         Serial.println(F("Time/date saved to RTC"));
+        
+        // Force immediate sensor read to update display with new time
+        Serial.println(F("Forcing sensor read to update display time..."));
+        sensors.readSensors();
+        
         hasDateTimeChanges = false;
       }
       editingSettingValue = false;
