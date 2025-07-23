@@ -40,6 +40,7 @@ public:
   
   // Button functions
   ButtonState getButtonState();
+  void clearButtonState(); // Clear button state after handling
   bool isButtonPressed();
   bool isButtonHeld();
   bool wasButtonReleased();

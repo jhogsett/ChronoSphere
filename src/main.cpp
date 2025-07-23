@@ -23,6 +23,12 @@ DisplayMode currentDisplayMode = MODE_ROLLING_CURRENT;  // Start in rolling mode
 bool settingsMode = false;
 SettingItem currentSetting = SETTING_TIME;
 
+// Time/Date setting state
+int settingTimeComponent = 0;  // 0=hour, 1=minute, 2=second
+int settingDateComponent = 0;  // 0=month, 1=day, 2=year
+DateTime pendingDateTime;      // Working copy for time/date changes
+bool hasDateTimeChanges = false;
+
 // Timing variables
 unsigned long lastMainLoop = 0;
 const unsigned long MAIN_LOOP_INTERVAL = 50; // 20Hz main loop
@@ -210,7 +216,12 @@ void loop() {
   if (displayManager.isTimeToUpdate()) {
     Serial.print(F("Updating display, mode: "));
     Serial.println((int)currentDisplayMode);
-    displayManager.update(currentData);
+    if (settingsMode) {
+      displayManager.updateSettings(currentData, settingsMode, currentSetting, 
+                                    settingTimeComponent, settingDateComponent, pendingDateTime);
+    } else {
+      displayManager.update(currentData);
+    }
   }
   
   // Update motors
@@ -229,27 +240,94 @@ void handleUserInput() {
   int encoderDelta = userInput.getEncoderDelta();
   ButtonState buttonState = userInput.getButtonState();
   
-  // Handle button presses
+  // Debug output for button state
+  if (buttonState != BUTTON_IDLE) {
+    Serial.print(F("Button state: "));
+    Serial.print(buttonState);
+    Serial.print(F(" (IDLE=0, PRESSED=1, HELD=2, RELEASED=3)"));
+    Serial.print(F(", Settings mode: "));
+    Serial.println(settingsMode);
+  }
+  
+  // Handle button presses - only respond to BUTTON_PRESSED state once
   if (buttonState == BUTTON_PRESSED) {
+    Serial.println(F("BUTTON_PRESSED detected"));
+    
     if (!settingsMode) {
       // Enter settings mode
+      Serial.println(F("Attempting to enter settings mode..."));
       settingsMode = true;
       currentSetting = SETTING_TIME;
-      Serial.println(F("Entering settings mode"));
+      settingTimeComponent = 0;
+      settingDateComponent = 0;
+      hasDateTimeChanges = false;
+      Serial.println(F("Settings mode entered successfully"));
     } else {
-      // Move to next setting or exit settings
-      int nextSetting = (int)currentSetting + 1;
-      if (nextSetting >= SETTING_MOTOR_SETTINGS + 1) {
-        settingsMode = false;
-        Serial.println(F("Exiting settings mode"));
+      Serial.println(F("Already in settings mode, handling component change..."));
+      
+      // In settings mode - button cycles through components or settings
+      if (currentSetting == SETTING_TIME) {
+        Serial.print(F("TIME: settingTimeComponent before: "));
+        Serial.println(settingTimeComponent);
+        settingTimeComponent = (settingTimeComponent + 1) % 3;
+        Serial.print(F("TIME: settingTimeComponent after: "));
+        Serial.println(settingTimeComponent);
+        if (settingTimeComponent == 0) {
+          // Completed time setting, save and move to date
+          if (hasDateTimeChanges) {
+            sensors.setDateTime(pendingDateTime);
+            Serial.println(F("Time saved to RTC"));
+          }
+          currentSetting = SETTING_DATE;
+          settingDateComponent = 0;
+          Serial.println(F("Moving to DATE setting"));
+        } else {
+          Serial.print(F("TIME: Now editing "));
+          Serial.println(settingTimeComponent == 1 ? "MINUTE" : "SECOND");
+        }
+      } else if (currentSetting == SETTING_DATE) {
+        settingDateComponent = (settingDateComponent + 1) % 3;
+        if (settingDateComponent == 0) {
+          // Completed date setting, save and move to next setting
+          if (hasDateTimeChanges) {
+            sensors.setDateTime(pendingDateTime);
+            Serial.println(F("Date saved to RTC"));
+            hasDateTimeChanges = false;
+          }
+          currentSetting = SETTING_CHIME_TYPE;
+          Serial.println(F("Moving to CHIME_TYPE setting"));
+        } else {
+          Serial.print(F("DATE: Now editing "));
+          Serial.println(settingDateComponent == 1 ? "DAY" : "YEAR");
+        }
       } else {
-        currentSetting = (SettingItem)nextSetting;
+        // Move to next setting or exit settings
+        int nextSetting = (int)currentSetting + 1;
+        if (nextSetting >= SETTING_MOTOR_SETTINGS + 1) {
+          // Save any pending changes before exiting
+          if (hasDateTimeChanges) {
+            sensors.setDateTime(pendingDateTime);
+            Serial.println(F("Final time/date saved to RTC"));
+          }
+          settingsMode = false;
+          hasDateTimeChanges = false;
+          Serial.println(F("Exiting settings mode"));
+        } else {
+          currentSetting = (SettingItem)nextSetting;
+          Serial.print(F("Moving to setting: "));
+          Serial.println((int)currentSetting);
+        }
       }
     }
   }
   
   // Handle encoder rotation
   if (encoderDelta != 0) {
+    Serial.print(F("Encoder delta: "));
+    Serial.print(encoderDelta);
+    Serial.print(F(", Settings mode: "));
+    Serial.println(settingsMode);
+    
     if (settingsMode) {
       handleSettingChange(encoderDelta);
     } else {
@@ -266,32 +344,140 @@ void handleUserInput() {
 }
 
 void handleSettingChange(int delta) {
-  // This is a placeholder - you would implement specific setting changes
-  // based on the currentSetting and delta values
-  
   switch (currentSetting) {
     case SETTING_TIME:
-      // Adjust time
-      Serial.println(F("Adjusting time setting"));
+      {
+        // Initialize pending time if first edit
+        if (!hasDateTimeChanges) {
+          pendingDateTime = sensors.getCurrentTime();
+          hasDateTimeChanges = true;
+        }
+        
+        // Adjust current time component
+        switch (settingTimeComponent) {
+          case 0: // Hour
+            {
+              int hour = pendingDateTime.getHour() + delta;
+              if (hour < 0) hour = 23;
+              if (hour > 23) hour = 0;
+              pendingDateTime = DateTime(pendingDateTime.getYear(), pendingDateTime.getMonth(), 
+                                       pendingDateTime.getDay(), hour, pendingDateTime.getMinute(), 
+                                       pendingDateTime.getSecond());
+              Serial.print(F("Hour set to: "));
+              Serial.println(hour);
+            }
+            break;
+          case 1: // Minute
+            {
+              int minute = pendingDateTime.getMinute() + delta;
+              if (minute < 0) minute = 59;
+              if (minute > 59) minute = 0;
+              pendingDateTime = DateTime(pendingDateTime.getYear(), pendingDateTime.getMonth(), 
+                                       pendingDateTime.getDay(), pendingDateTime.getHour(), minute, 
+                                       pendingDateTime.getSecond());
+              Serial.print(F("Minute set to: "));
+              Serial.println(minute);
+            }
+            break;
+          case 2: // Second
+            {
+              int second = pendingDateTime.getSecond() + delta;
+              if (second < 0) second = 59;
+              if (second > 59) second = 0;
+              pendingDateTime = DateTime(pendingDateTime.getYear(), pendingDateTime.getMonth(), 
+                                       pendingDateTime.getDay(), pendingDateTime.getHour(), 
+                                       pendingDateTime.getMinute(), second);
+              Serial.print(F("Second set to: "));
+              Serial.println(second);
+            }
+            break;
+        }
+        
+        // Show current time setting
+        Serial.print(F("Setting time: "));
+        Serial.print(pendingDateTime.getHour());
+        Serial.print(F(":"));
+        if (pendingDateTime.getMinute() < 10) Serial.print(F("0"));
+        Serial.print(pendingDateTime.getMinute());
+        Serial.print(F(":"));
+        if (pendingDateTime.getSecond() < 10) Serial.print(F("0"));
+        Serial.print(pendingDateTime.getSecond());
+        Serial.print(F(" (editing "));
+        Serial.print(settingTimeComponent == 0 ? "HOUR" : settingTimeComponent == 1 ? "MINUTE" : "SECOND");
+        Serial.println(F(")"));
+      }
       break;
       
     case SETTING_DATE:
-      // Adjust date
-      Serial.println(F("Adjusting date setting"));
+      {
+        // Initialize pending date if first edit
+        if (!hasDateTimeChanges) {
+          pendingDateTime = sensors.getCurrentTime();
+          hasDateTimeChanges = true;
+        }
+        
+        // Adjust current date component
+        switch (settingDateComponent) {
+          case 0: // Month
+            {
+              int month = pendingDateTime.getMonth() + delta;
+              if (month < 1) month = 12;
+              if (month > 12) month = 1;
+              pendingDateTime = DateTime(pendingDateTime.getYear(), month, pendingDateTime.getDay(), 
+                                       pendingDateTime.getHour(), pendingDateTime.getMinute(), 
+                                       pendingDateTime.getSecond());
+              Serial.print(F("Month set to: "));
+              Serial.println(month);
+            }
+            break;
+          case 1: // Day
+            {
+              int day = pendingDateTime.getDay() + delta;
+              if (day < 1) day = 31;  // Simplified - doesn't account for different month lengths
+              if (day > 31) day = 1;
+              pendingDateTime = DateTime(pendingDateTime.getYear(), pendingDateTime.getMonth(), day, 
+                                       pendingDateTime.getHour(), pendingDateTime.getMinute(), 
+                                       pendingDateTime.getSecond());
+              Serial.print(F("Day set to: "));
+              Serial.println(day);
+            }
+            break;
+          case 2: // Year
+            {
+              int year = pendingDateTime.getYear() + delta;
+              if (year < 2020) year = 2020;
+              if (year > 2099) year = 2099;
+              pendingDateTime = DateTime(year, pendingDateTime.getMonth(), pendingDateTime.getDay(), 
+                                       pendingDateTime.getHour(), pendingDateTime.getMinute(), 
+                                       pendingDateTime.getSecond());
+              Serial.print(F("Year set to: "));
+              Serial.println(year);
+            }
+            break;
+        }
+        
+        // Show current date setting
+        Serial.print(F("Setting date: "));
+        Serial.print(pendingDateTime.getMonth());
+        Serial.print(F("/"));
+        Serial.print(pendingDateTime.getDay());
+        Serial.print(F("/"));
+        Serial.print(pendingDateTime.getYear());
+        Serial.print(F(" (editing "));
+        Serial.print(settingDateComponent == 0 ? "MONTH" : settingDateComponent == 1 ? "DAY" : "YEAR");
+        Serial.println(F(")"));
+      }
       break;
       
     case SETTING_CHIME_TYPE:
-      // Change chime type
       Serial.println(F("Adjusting chime type"));
       break;
       
     case SETTING_CHIME_INSTRUMENT:
-      // Change MIDI instrument
       Serial.println(F("Adjusting chime instrument"));
       break;
       
     case SETTING_CHIME_FREQUENCY:
-      // Change chime frequency
       Serial.println(F("Adjusting chime frequency"));
       break;
       

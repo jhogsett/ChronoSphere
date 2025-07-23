@@ -77,6 +77,17 @@ void DisplayManager::update(SensorData sensorData) {
   lastUpdateTime = millis();
 }
 
+void DisplayManager::updateSettings(SensorData sensorData, bool settingsMode, SettingItem currentSetting, 
+                                     int settingTimeComponent, int settingDateComponent, DateTime pendingDateTime) {
+  if (settingsMode) {
+    displaySettingsInterface(currentSetting, settingTimeComponent, settingDateComponent, pendingDateTime);
+  } else {
+    // Normal display update
+    update(sensorData);
+  }
+  lastUpdateTime = millis();
+}
+
 bool DisplayManager::isTimeToUpdate() {
   return (millis() - lastUpdateTime >= DISPLAY_UPDATE_INTERVAL);
 }
@@ -378,6 +389,73 @@ void DisplayManager::displayRollingTrends() {
 
 void DisplayManager::displaySettings() {
   displayString("SETTINGS MODE");
+}
+
+void DisplayManager::displaySettingsInterface(SettingItem currentSetting, int settingTimeComponent, 
+                                               int settingDateComponent, DateTime pendingDateTime) {
+  char displayText[13];
+  
+  switch (currentSetting) {
+    case SETTING_TIME:
+      {
+        char timeStr[9];  // "HH:MM:SS"
+        sprintf(timeStr, "%02d:%02d:%02d", pendingDateTime.getHour(), 
+                pendingDateTime.getMinute(), pendingDateTime.getSecond());
+        
+        // Show which component is being edited
+        switch (settingTimeComponent) {
+          case 0: // Hour
+            sprintf(displayText, "H%s", timeStr);
+            break;
+          case 1: // Minute  
+            sprintf(displayText, "M%s", timeStr);
+            break;
+          case 2: // Second
+            sprintf(displayText, "S%s", timeStr);
+            break;
+        }
+      }
+      break;
+      
+    case SETTING_DATE:
+      {
+        char dateStr[9];  // "MM/DD/YY"
+        sprintf(dateStr, "%02d/%02d/%02d", pendingDateTime.getMonth(), 
+                pendingDateTime.getDay(), pendingDateTime.getYear() % 100);
+        
+        // Show which component is being edited
+        switch (settingDateComponent) {
+          case 0: // Month
+            sprintf(displayText, "MO%s", dateStr);
+            break;
+          case 1: // Day
+            sprintf(displayText, "DY%s", dateStr);
+            break;
+          case 2: // Year
+            sprintf(displayText, "YR%s", dateStr);
+            break;
+        }
+      }
+      break;
+      
+    case SETTING_CHIME_TYPE:
+      sprintf(displayText, "CHIME TYPE  ");
+      break;
+      
+    case SETTING_CHIME_INSTRUMENT:
+      sprintf(displayText, "CHIME INST  ");
+      break;
+      
+    case SETTING_CHIME_FREQUENCY:
+      sprintf(displayText, "CHIME FREQ  ");
+      break;
+      
+    default:
+      sprintf(displayText, "SETTING %03d ", (int)currentSetting);
+      break;
+  }
+  
+  displayString(displayText);
 }
 
 void DisplayManager::formatFloat(float value, char* buffer, uint8_t decimals) {
