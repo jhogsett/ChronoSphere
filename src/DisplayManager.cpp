@@ -265,7 +265,7 @@ void DisplayManager::displayRollingCurrent(SensorData data) {
   Serial.print(F("Current rolling index: "));
   Serial.println(rollingIndex);
   
-  char buffer1[5], buffer2[5], buffer3[5];
+  char buffer1[10], buffer2[10], buffer3[10];
   
   switch (rollingIndex) {
     case 0: // Time and actual temperature
@@ -299,7 +299,21 @@ void DisplayManager::displayRollingCurrent(SensorData data) {
     case 2: // Temperature word and humidity
       Serial.println(F("Case 2: Temperature word and humidity"));
       strcpy(buffer1, data.tempWord);
+      
+      // DEBUG: Show humidity formatting process
+      Serial.print(F("DEBUG: Raw humidity float: "));
+      Serial.println(data.humidity);
+      Serial.print(F("DEBUG: Cast to int: "));
+      Serial.println((int)data.humidity);
+      
       sprintf(buffer2, "%3d%%", (int)data.humidity);
+      
+      Serial.print(F("DEBUG: Formatted humidity string: '"));
+      Serial.print(buffer2);
+      Serial.print(F("' (length: "));
+      Serial.print(strlen(buffer2));
+      Serial.println(F(")"));
+      
       strcpy(buffer3, "HUM ");
       Serial.print(F("Buffer1: ")); Serial.println(buffer1);
       Serial.print(F("Buffer2: ")); Serial.println(buffer2);
@@ -328,7 +342,20 @@ void DisplayManager::displayRollingCurrent(SensorData data) {
   }
   
   // Combine into single 12-character string for unified display
-  char displayText[13];
+
+  Serial.println("\r\n\r\n\r\n\r\n\r\n");
+  Serial.print("|");
+  Serial.print(buffer1);
+  Serial.println("|");
+  Serial.print("|");
+  Serial.print(buffer2);
+  Serial.println("|");
+  Serial.print("|");
+  Serial.print(buffer3);
+  Serial.println("|");
+  Serial.println("\r\n\r\n\r\n\r\n\r\n");
+
+  char displayText[20];
   sprintf(displayText, "%4s%4s%4s", buffer1, buffer2, buffer3);
   
   Serial.print(F("Final display text: '"));

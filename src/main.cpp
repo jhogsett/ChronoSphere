@@ -177,20 +177,34 @@ void loop() {
     }
   }
   
-  // DEBUGGING: Start with dummy data, then replace ONE real value at a time
-  currentData.temperatureF = realData.temperatureF;  // STEP 1: REAL TEMPERATURE ✅ WORKS
-  currentData.feelsLikeF = realData.feelsLikeF;      // STEP 3: REAL FEELS LIKE ✅ WORKS
-  strcpy(currentData.tempWord, realData.tempWord);   // STEP 2: REAL TEMP WORD ✅ WORKS
-  currentData.humidity = 45.0;                       // DUMMY - REAL HUMIDITY BREAKS DISPLAY!
+  // DEBUGGING: Using ALL dummy data to test display stability
+  currentData.temperatureF = 79.5;                   // DUMMY
+  currentData.feelsLikeF = 77.8;                     // DUMMY
+  strcpy(currentData.tempWord, "WARM");              // DUMMY
+  currentData.humidity = 45.0;                       // DUMMY
   currentData.pressure = 1013.0;                     // DUMMY
   currentData.lightLevel = 150.0;                    // DUMMY
-  
-  Serial.print(F("DISPLAY DATA - Temp: "));
-  Serial.print(currentData.temperatureF);
-  Serial.print(F("F, FeelsLike: "));
-  Serial.print(currentData.feelsLikeF);
-  Serial.print(F("F, Word: "));
-  Serial.println(currentData.tempWord);
+
+  currentData.temperatureF = realData.temperatureF;      
+  currentData.feelsLikeF = realData.feelsLikeF;        
+  strcpy(currentData.tempWord, realData.tempWord); 
+  currentData.humidity = realData.humidity;          
+  currentData.pressure = realData.pressure;        
+  currentData.lightLevel = realData.lightLevel;       
+
+  // Serial.print(F("DISPLAY DATA - ALL DUMMY: Temp: "));
+  // Serial.print(currentData.temperatureF);
+  // Serial.print(F("F, FeelsLike: "));
+  // Serial.print(currentData.feelsLikeF);
+  // Serial.print(F("F, Word: "));
+  // Serial.print(currentData.tempWord);
+  // Serial.print(F(", Humidity: "));
+  // Serial.print(currentData.humidity);
+  // Serial.print(F("%, Pressure: "));
+  // Serial.print(currentData.pressure);
+  // Serial.print(F(" hPa, Light: "));
+  // Serial.print(currentData.lightLevel);
+  // Serial.println(F(" lux"));
   
   // Update display every cycle (like hardware test does)
   if (displayManager.isTimeToUpdate()) {
