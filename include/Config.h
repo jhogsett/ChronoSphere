@@ -76,7 +76,10 @@ enum MidiInstrument {
   INSTRUMENT_TUBULAR_BELLS = 14,
   INSTRUMENT_VIBRAPHONE = 11,
   INSTRUMENT_GLOCKENSPIEL = 9,
-  INSTRUMENT_CHURCH_ORGAN = 19
+  INSTRUMENT_CHURCH_ORGAN = 19,
+  INSTRUMENT_TIMPANI = 47,        // Deep, percussive - good for hour strikes
+  INSTRUMENT_ORCHESTRAL_HARP = 46, // Rich, resonant
+  INSTRUMENT_CHURCH_BELL = 14      // Same as tubular bells but clearer name
 };
 
 // Display Modes
