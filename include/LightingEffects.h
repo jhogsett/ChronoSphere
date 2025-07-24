@@ -40,6 +40,7 @@ private:
   uint8_t alertFlashesRemaining;
   unsigned long alertTimer;
   static const unsigned long ALERT_FLASH_DURATION = 200; // ms
+  static const unsigned long ALERT_SUSTAINED_DURATION = 600000; // 10 minutes in ms
   
   // Color palettes
   static const Color temperatureColors[];
