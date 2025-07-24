@@ -38,11 +38,26 @@ bool DisplayManager::init() {
   rollingIndex = 0;
   rollingTimer = 0;
   
+  // Initialize alert display state
+  displayingAlert = false;
+  currentAlertType = ALERT_NONE;
+  alertDisplayStart = 0;
+  
   Serial.println(F("Display manager initialized"));
   return true;
 }
 
 void DisplayManager::update(SensorData sensorData) {
+  // Check if alert display has timed out (show alert for 3 seconds)
+  if (displayingAlert && (millis() - alertDisplayStart > 3000)) {
+    clearAlert();
+  }
+  
+  // If displaying alert, skip normal display updates
+  if (displayingAlert) {
+    return;
+  }
+  
   switch (currentMode) {
     case MODE_CLOCK:
       displayTime(sensorData.currentTime);
@@ -105,22 +120,6 @@ bool DisplayManager::isTimeToUpdate() {
 
 void DisplayManager::clearAllDisplays() {
   displayGroup->clear();
-}
-
-void DisplayManager::displayOnModule(uint8_t module, const char* text) {
-  // For backward compatibility: position text at specific 4-character segment
-  // Module 0 = chars 0-3, Module 1 = chars 4-7, Module 2 = chars 8-11
-  char displayText[13] = "            "; // 12 spaces
-  
-  if (module <= 2) {
-    int startPos = module * 4;
-    // Copy up to 4 characters to the appropriate position
-    for (int i = 0; i < 4 && text[i] != '\0'; i++) {
-      displayText[startPos + i] = text[i];
-    }
-  }
-  
-  displayGroup->show_string(displayText);
 }
 
 void DisplayManager::displayString(const char* text) {
@@ -266,32 +265,18 @@ void DisplayManager::displayWeatherSummary(SensorData data) {
 }
 
 void DisplayManager::displayRollingCurrent(SensorData data) {
-  Serial.println(F("=== ROLLING DISPLAY START ==="));
   unsigned long currentTime = millis();
-  
-  Serial.print(F("Current time: "));
-  Serial.println(currentTime);
-  Serial.print(F("Rolling timer: "));
-  Serial.println(rollingTimer);
-  Serial.print(F("Time diff: "));
-  Serial.println(currentTime - rollingTimer);
   
   // Change display every 3 seconds
   if (currentTime - rollingTimer > 3000) {
     rollingTimer = currentTime;
     rollingIndex = (rollingIndex + 1) % 5;
-    Serial.print(F("Rolling index changed to: "));
-    Serial.println(rollingIndex);
   }
-  
-  Serial.print(F("Current rolling index: "));
-  Serial.println(rollingIndex);
   
   char buffer1[10], buffer2[10], buffer3[10];
   
   switch (rollingIndex) {
     case 0: // Time and actual temperature
-      Serial.println(F("Case 0: Time and actual temperature"));
       formatTime(data.currentTime, buffer1);
       if(data.temperatureF < 100.0){
         float_to_fixed(data.temperatureF, buffer2, "%2d.%1d");
@@ -299,13 +284,9 @@ void DisplayManager::displayRollingCurrent(SensorData data) {
         float_to_fixed(data.temperatureF, buffer2, "%3d");
       }
       strcpy(buffer3, "TEMP");
-      Serial.print(F("Buffer1: ")); Serial.println(buffer1);
-      Serial.print(F("Buffer2: ")); Serial.println(buffer2);
-      Serial.print(F("Buffer3: ")); Serial.println(buffer3);
       break;
       
     case 1: // Date and feels-like temperature
-      Serial.println(F("Case 1: Date and feels-like temperature"));
       formatDate(data.currentTime, buffer1);
       if(data.feelsLikeF < 100.0){
         float_to_fixed(data.feelsLikeF, buffer2, "%2d.%1d");
@@ -313,94 +294,32 @@ void DisplayManager::displayRollingCurrent(SensorData data) {
         float_to_fixed(data.feelsLikeF, buffer2, "%3d");
       }
       strcpy(buffer3, "FEEL");
-      Serial.print(F("Buffer1: ")); Serial.println(buffer1);
-      Serial.print(F("Buffer2: ")); Serial.println(buffer2);
-      Serial.print(F("Buffer3: ")); Serial.println(buffer3);
       break;
       
     case 2: // Temperature word and humidity
-      Serial.println(F("Case 2: Temperature word and humidity"));
       strcpy(buffer1, data.tempWord);
-      
-      // DEBUG: Show humidity formatting process
-      Serial.print(F("DEBUG: Raw humidity float: "));
-      Serial.println(data.humidity);
-      Serial.print(F("DEBUG: Cast to int: "));
-      Serial.println((int)data.humidity);
-      
       sprintf(buffer2, "%3d%%", (int)data.humidity);
-      
-      Serial.print(F("DEBUG: Formatted humidity string: '"));
-      Serial.print(buffer2);
-      Serial.print(F("' (length: "));
-      Serial.print(strlen(buffer2));
-      Serial.println(F(")"));
-      
       strcpy(buffer3, "HUM ");
-      Serial.print(F("Buffer1: ")); Serial.println(buffer1);
-      Serial.print(F("Buffer2: ")); Serial.println(buffer2);
-      Serial.print(F("Buffer3: ")); Serial.println(buffer3);
       break;
       
     case 3: // Pressure
-      Serial.println(F("Case 3: Pressure"));
       sprintf(buffer1, "%4d", (int)data.pressure);
       strcpy(buffer2, "PRES");
       strcpy(buffer3, "HPA ");
-      Serial.print(F("Buffer1: ")); Serial.println(buffer1);
-      Serial.print(F("Buffer2: ")); Serial.println(buffer2);
-      Serial.print(F("Buffer3: ")); Serial.println(buffer3);
       break;
       
     case 4: // Light level
-      Serial.println(F("Case 4: Light level"));
-      Serial.print(F("DEBUG: Raw lightLevel float: "));
-      Serial.println(data.lightLevel);
-      Serial.print(F("DEBUG: lightLevel is finite: "));
-      Serial.println(isfinite(data.lightLevel));
-      Serial.print(F("DEBUG: lightLevel is NaN: "));
-      Serial.println(isnan(data.lightLevel));
-      
-      // Use float_to_fixed with 0 decimals (now fixed to handle this case)
-      float_to_fixed(data.lightLevel, buffer1, "%4d", 0);  // 0 decimals for integer display
-      
-      Serial.print(F("DEBUG: Formatted lightLevel string: '"));
-      Serial.print(buffer1);
-      Serial.print(F("' (length: "));
-      Serial.print(strlen(buffer1));
-      Serial.println(F(")"));
-      
+      float_to_fixed(data.lightLevel, buffer1, "%4d", 0);
       strcpy(buffer2, "LITE");
       strcpy(buffer3, "LUX ");
-      Serial.print(F("Buffer1: ")); Serial.println(buffer1);
-      Serial.print(F("Buffer2: ")); Serial.println(buffer2);
-      Serial.print(F("Buffer3: ")); Serial.println(buffer3);
       break;
   }
   
   // Combine into single 12-character string for unified display
-
-  Serial.println("\r\n\r\n\r\n\r\n\r\n");
-  Serial.print("|");
-  Serial.print(buffer1);
-  Serial.println("|");
-  Serial.print("|");
-  Serial.print(buffer2);
-  Serial.println("|");
-  Serial.print("|");
-  Serial.print(buffer3);
-  Serial.println("|");
-  Serial.println("\r\n\r\n\r\n\r\n\r\n");
-
   char displayText[20];
   sprintf(displayText, "%4s%4s%4s", buffer1, buffer2, buffer3);
   
-  Serial.print(F("Final display text: '"));
-  Serial.print(displayText);
-  Serial.println(F("'"));
-  
   displayString(displayText);
-  Serial.println(F("=== ROLLING DISPLAY END ==="));
 }
 
 void DisplayManager::displayRollingHistorical() {
@@ -431,10 +350,10 @@ void DisplayManager::displaySettingsMenu(SettingItem currentSetting) {
       sprintf(displayText, "Chime TYPE  ");
       break;
     case SETTING_CHIME_INSTRUMENT:
-      sprintf(displayText, "Chime INSTRU.");
+      sprintf(displayText, "Chime INSTR ");
       break;
     case SETTING_CHIME_FREQUENCY:
-      sprintf(displayText, "Chime FREQUE.");
+      sprintf(displayText, "Chime FREQ  ");
       break;
     case SETTING_EXIT:
       sprintf(displayText, "EXIT        ");
@@ -588,4 +507,38 @@ void DisplayManager::showSetting(SettingItem setting, int value) {
   char settingText[13];
   sprintf(settingText, "SET %4d TING", value);
   displayString(settingText);
+}
+
+void DisplayManager::showAlert(AlertType alertType) {
+  char alertText[13];
+  
+  switch (alertType) {
+    case ALERT_PRESSURE:
+      sprintf(alertText, "PRESS ALERT ");
+      break;
+    case ALERT_TEMPERATURE:
+      sprintf(alertText, "TEMP ALERT  ");
+      break;
+    case ALERT_RAPID_CHANGE:
+      sprintf(alertText, "WTHR ALERT  ");
+      break;
+    default:
+      sprintf(alertText, "ALERT       ");
+      break;
+  }
+  
+  displayString(alertText);
+  displayingAlert = true;
+  currentAlertType = alertType;
+  alertDisplayStart = millis();
+}
+
+void DisplayManager::clearAlert() {
+  displayingAlert = false;
+  currentAlertType = ALERT_NONE;
+  alertDisplayStart = 0;
+}
+
+bool DisplayManager::isDisplayingAlert() {
+  return displayingAlert;
 }

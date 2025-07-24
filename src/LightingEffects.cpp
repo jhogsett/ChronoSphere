@@ -36,16 +36,42 @@ bool LightingEffects::init() {
   brightness = 128; // Medium brightness
   animationStep = 0;
   
+  // Initialize alert state machine
+  currentAlert = ALERT_NONE;
+  alertState = ALERT_STATE_IDLE;
+  alertFlashesRemaining = 0;
+  alertTimer = 0;
+  
   Serial.println(F("Lighting effects initialized"));
   return true;
 }
 
 void LightingEffects::update(SensorData sensorData) {
+  // Store sensor data for use in alert transitions
+  this->currentSensorData = sensorData;
+  
   unsigned long currentTime = millis();
   
-  // Update at ~30 FPS
+  // Always handle alert state machine first (needs precise timing)
+  updateAlert();
+  
+  // If alert is active, skip ALL normal lighting updates
+  if (currentAlert != ALERT_NONE) {
+    lastUpdate = currentTime;
+    return;  // Don't do ANY normal lighting while alert is active
+  }
+  
+  // Update at ~30 FPS for normal lighting effects
   if (currentTime - lastUpdate < 33) {
     return;
+  }
+  
+  // DEBUG: Print current mode periodically
+  static unsigned long lastModeDebug = 0;
+  if (currentTime - lastModeDebug > 5000) { // Every 5 seconds
+    Serial.print(F("DEBUG: Current lighting mode: "));
+    Serial.println((int)currentMode);
+    lastModeDebug = currentTime;
   }
   
   switch (currentMode) {
@@ -58,11 +84,11 @@ void LightingEffects::update(SensorData sensorData) {
       break;
       
     case LIGHTING_TEMPERATURE_GRADIENT:
-      updateTemperatureGradient(sensorData.temperatureF);
+      updateTemperatureGradient(currentSensorData.temperatureF);
       break;
       
     case LIGHTING_WEATHER_INDICATOR:
-      updateWeatherIndicator(sensorData);
+      updateWeatherIndicator(currentSensorData);
       break;
       
     case LIGHTING_RAINBOW:
@@ -74,7 +100,7 @@ void LightingEffects::update(SensorData sensorData) {
       break;
       
     case LIGHTING_CLOCK_INDICATOR:
-      updateClockIndicator(sensorData.currentTime);
+      updateClockIndicator(currentSensorData.currentTime);
       break;
   }
   
@@ -85,6 +111,13 @@ void LightingEffects::update(SensorData sensorData) {
 
 void LightingEffects::updateTemperatureGradient(float temperature) {
   Color tempColor = temperatureToColor(temperature);
+  
+  // DEBUG: Check if we're showing red due to high temperature
+  if (tempColor.red > 200 && tempColor.green < 100 && tempColor.blue < 100) {
+    Serial.print(F("DEBUG: Temperature gradient is RED due to temp: "));
+    Serial.print(temperature);
+    Serial.println(F("F"));
+  }
   
   for (int i = 0; i < strip.numPixels(); i++) {
     // Create gradient effect with slight variation per pixel
@@ -266,19 +299,118 @@ void LightingEffects::setPixelColor(uint8_t pixel, uint8_t red, uint8_t green, u
 }
 
 void LightingEffects::flashAlert(Color color, uint8_t flashes) {
-  for (uint8_t i = 0; i < flashes; i++) {
-    // Flash on
-    for (int j = 0; j < strip.numPixels(); j++) {
-      strip.setPixelColor(j, colorToUint32(color));
-    }
-    show();
-    delay(200);
-    
-    // Flash off
-    clear();
-    show();
-    delay(200);
+  // Use the non-blocking alert system instead of blocking delays
+  startAlert(ALERT_RAPID_CHANGE, color, flashes); // Use generic alert type
+}
+
+void LightingEffects::updateAlert() {
+  if (currentAlert == ALERT_NONE) {
+    return;
   }
+  
+  unsigned long currentTime = millis();
+  
+  switch (alertState) {
+    case ALERT_STATE_IDLE:
+      // Alert is finished, normal lighting will take over
+      break;
+      
+    case ALERT_STATE_FLASH_ON:
+      if (currentTime - alertTimer >= 200) { // 200ms on
+        // Turn off and move to flash off state
+        clear();
+        show();
+        alertState = ALERT_STATE_FLASH_OFF;
+        alertTimer = currentTime;
+      }
+      break;
+      
+    case ALERT_STATE_FLASH_OFF:
+      if (currentTime - alertTimer >= 200) { // 200ms off
+        alertFlashesRemaining--;
+        if (alertFlashesRemaining > 0) {
+          // Start next flash
+          for (int i = 0; i < strip.numPixels(); i++) {
+            strip.setPixelColor(i, colorToUint32(alertColor));
+          }
+          show();
+          alertState = ALERT_STATE_FLASH_ON;
+          alertTimer = currentTime;
+        } else {
+          // All flashes completed - move to sustained alert mode
+          alertState = ALERT_STATE_SUSTAINED;
+          alertTimer = currentTime;
+          
+          // Set sustained alert color (solid, no flashing)
+          for (int i = 0; i < strip.numPixels(); i++) {
+            strip.setPixelColor(i, colorToUint32(alertColor));
+          }
+          show();
+        }
+      }
+      break;
+      
+    case ALERT_STATE_SUSTAINED:
+      // Show sustained alert color for extended period
+      if (currentTime - alertTimer >= ALERT_SUSTAINED_DURATION) { // 10 minutes
+        // Sustained alert period finished - return to normal mode
+        alertState = ALERT_STATE_IDLE;
+        currentAlert = ALERT_NONE;
+        
+        // Force immediate update to normal lighting
+        switch (currentMode) {
+          case LIGHTING_OFF:
+            clear();
+            break;
+          case LIGHTING_TEMPERATURE_GRADIENT:
+            updateTemperatureGradient(currentSensorData.temperatureF);
+            break;
+          case LIGHTING_WEATHER_INDICATOR:
+            updateWeatherIndicator(currentSensorData);
+            break;
+          case LIGHTING_RAINBOW:
+            updateRainbow();
+            break;
+          case LIGHTING_BREATHING:
+            updateBreathing();
+            break;
+          case LIGHTING_CLOCK_INDICATOR:
+            updateClockIndicator(currentSensorData.currentTime);
+            break;
+          case LIGHTING_SOLID_COLOR:
+            // Solid color mode - color set manually, don't override
+            break;
+        }
+        show();
+      }
+      break;
+  }
+}
+
+void LightingEffects::startAlert(AlertType type, Color color, uint8_t flashes) {
+  currentAlert = type;
+  alertColor = color;
+  alertFlashesRemaining = flashes;
+  alertState = ALERT_STATE_FLASH_ON;
+  alertTimer = millis();
+  
+  // Start first flash immediately
+  for (int i = 0; i < strip.numPixels(); i++) {
+    strip.setPixelColor(i, colorToUint32(color));
+  }
+  show();
+}
+
+void LightingEffects::startNonBlockingAlert(AlertType type, Color color, uint8_t flashes) {
+  startAlert(type, color, flashes);
+}
+
+bool LightingEffects::isAlertActive() {
+  return currentAlert != ALERT_NONE;
+}
+
+AlertType LightingEffects::getCurrentAlert() {
+  return currentAlert;
 }
 
 void LightingEffects::showStartupSequence() {

@@ -104,4 +104,20 @@ enum SettingItem {
   SETTING_EXIT
 };
 
+// Alert Types
+enum AlertType {
+  ALERT_NONE = 0,
+  ALERT_PRESSURE,
+  ALERT_TEMPERATURE,
+  ALERT_RAPID_CHANGE
+};
+
+// Alert States
+enum AlertState {
+  ALERT_STATE_IDLE = 0,
+  ALERT_STATE_FLASH_ON,
+  ALERT_STATE_FLASH_OFF,
+  ALERT_STATE_SUSTAINED    // Show alert color continuously
+};
+
 #endif

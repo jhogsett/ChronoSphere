@@ -30,6 +30,18 @@ private:
   uint8_t brightness;
   uint16_t animationStep;
   
+  // Current sensor data for use in alert transitions
+  SensorData currentSensorData;
+  
+  // Alert state machine
+  AlertType currentAlert;
+  AlertState alertState;
+  Color alertColor;
+  uint8_t alertFlashesRemaining;
+  unsigned long alertTimer;
+  static const unsigned long ALERT_FLASH_DURATION = 200; // ms
+  static const unsigned long ALERT_SUSTAINED_DURATION = 600000; // 10 minutes in ms
+  
   // Color palettes
   static const Color temperatureColors[];
   static const Color weatherColors[];
@@ -40,6 +52,10 @@ private:
   void updateRainbow();
   void updateBreathing();
   void updateClockIndicator(DateTime time);
+  
+  // Alert state machine methods
+  void updateAlert();
+  void startAlert(AlertType type, Color color, uint8_t flashes);
   
   Color interpolateColor(Color color1, Color color2, float factor);
   Color temperatureToColor(float tempF);
@@ -64,6 +80,9 @@ public:
   
   // Special effects
   void flashAlert(Color color, uint8_t flashes);
+  void startNonBlockingAlert(AlertType type, Color color, uint8_t flashes);
+  bool isAlertActive();
+  AlertType getCurrentAlert();
   void showStartupSequence();
   void showErrorPattern();
   
