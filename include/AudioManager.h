@@ -22,12 +22,24 @@ private:
   unsigned long playStartTime;
   
   // Chime sequences
+  // Westminster enhancement: Play 3rd & 4th quarters before hour chimes
+  // Chime frequency settings:
+  // - 1: Hourly only (0 min) - Hour: Changes 4,5 + strikes | Half/Quarters: None
+  // - 2: Half-hourly (0,30 min) - Hour: Changes 4,5 + strikes | Half: Single bell
+  // - 4: Quarter-hourly (0,15,30,45 min) - All above + Quarters: Regular chime
   static const ChimeNote westminsterChime[];
+  static const ChimeNote westminsterChange1[];
+  static const ChimeNote westminsterChange2[];
+  static const ChimeNote westminsterChange3[];
+  static const ChimeNote westminsterChange4[];
+  static const ChimeNote westminsterChange5[];
   static const ChimeNote whittingtonChime[];
   static const ChimeNote stMichaelsChime[];
   
   void playChimeSequence(const ChimeNote* sequence, uint8_t length);
   void playHourChime(uint8_t hour);
+  void playHalfHourChime();
+  void playFullWestminsterHour(uint8_t hour);
 
 public:
   // Constructor
@@ -42,6 +54,7 @@ public:
   // Chime functions
   void checkAndPlayChime(DateTime currentTime);
   void playTestChime();
+  void playStartupChime(); // Play startup chime for main app initialization
   void setChimeType(ChimeType type);
   void setChimeInstrument(MidiInstrument instrument);
   void setChimeFrequency(uint8_t frequency);

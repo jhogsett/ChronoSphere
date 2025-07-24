@@ -88,6 +88,7 @@ void setup() {
     Serial.println(F("All modules initialized successfully"));
     displayManager.showStartupMessage();
     lightingEffects.showStartupSequence();
+    audioManager.playStartupChime();
     
     // Calibrate motors
     motorControl.calibrateMinuteHand();
