@@ -122,22 +122,6 @@ void DisplayManager::clearAllDisplays() {
   displayGroup->clear();
 }
 
-void DisplayManager::displayOnModule(uint8_t module, const char* text) {
-  // For backward compatibility: position text at specific 4-character segment
-  // Module 0 = chars 0-3, Module 1 = chars 4-7, Module 2 = chars 8-11
-  char displayText[13] = "            "; // 12 spaces
-  
-  if (module <= 2) {
-    int startPos = module * 4;
-    // Copy up to 4 characters to the appropriate position
-    for (int i = 0; i < 4 && text[i] != '\0'; i++) {
-      displayText[startPos + i] = text[i];
-    }
-  }
-  
-  displayGroup->show_string(displayText);
-}
-
 void DisplayManager::displayString(const char* text) {
   displayGroup->show_string(text);
 }

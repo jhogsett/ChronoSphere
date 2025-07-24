@@ -20,7 +20,6 @@ private:
   unsigned long alertDisplayStart;
   
   void clearAllDisplays();
-  void displayOnModule(uint8_t module, const char* text); // Deprecated - for compatibility
   void displayString(const char* text);
   void displayScrollingString(const char* text, int showDelay = 100, int scrollDelay = 100);
   void displayTime(DateTime time);

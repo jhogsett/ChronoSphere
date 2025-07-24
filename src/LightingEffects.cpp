@@ -352,7 +352,7 @@ void LightingEffects::updateAlert() {
       
     case ALERT_STATE_SUSTAINED:
       // Show sustained alert color for extended period
-      if (currentTime - alertTimer >= 600000) { // 10 minutes
+      if (currentTime - alertTimer >= ALERT_SUSTAINED_DURATION) { // 10 minutes
         // Sustained alert period finished - return to normal mode
         alertState = ALERT_STATE_IDLE;
         currentAlert = ALERT_NONE;

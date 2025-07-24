@@ -551,6 +551,8 @@ void checkWeatherAlerts() {
   }
   
   // Check for rapid weather changes and trigger alerts
+  // Note: Priority order - pressure alerts override temperature alerts, 
+  // which override rapid change alerts (only one alert active at a time)
   if (dataLogger.checkPressureAlert()) {
     audioManager.playPressureAlert();
     lightingEffects.startNonBlockingAlert(ALERT_PRESSURE, {255, 255, 0}, 3); // Yellow flash
