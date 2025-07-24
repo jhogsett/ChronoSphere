@@ -14,6 +14,11 @@ private:
   uint8_t rollingIndex;
   unsigned long rollingTimer;
   
+  // Alert display state
+  bool displayingAlert;
+  AlertType currentAlertType;
+  unsigned long alertDisplayStart;
+  
   void clearAllDisplays();
   void displayOnModule(uint8_t module, const char* text); // Deprecated - for compatibility
   void displayString(const char* text);
@@ -57,6 +62,11 @@ public:
   void showStartupMessage();
   void showError(const char* errorCode);
   void showSetting(SettingItem setting, int value);
+  
+  // Alert displays
+  void showAlert(AlertType alertType);
+  void clearAlert();
+  bool isDisplayingAlert();
 };
 
 #endif

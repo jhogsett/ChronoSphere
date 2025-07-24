@@ -138,8 +138,8 @@ void loop() {
   SensorData currentData = sensors.getCurrentData();
   
   // DEBUG: Check initial currentData lightLevel
-  Serial.print(F("DEBUG: Initial currentData.lightLevel: "));
-  Serial.println(currentData.lightLevel);
+  // Serial.print(F("DEBUG: Initial currentData.lightLevel: "));
+  // Serial.println(currentData.lightLevel);
   
   // Read sensors when needed and save real data
   SensorData realData = currentData;  // Keep a copy of real sensor data
@@ -205,8 +205,8 @@ void loop() {
   currentData.currentTime = realData.currentTime;  // IMPORTANT: Restore the real time!
 
   // DEBUG: Check final currentData lightLevel after restoration
-  Serial.print(F("DEBUG: Final currentData.lightLevel: "));
-  Serial.println(currentData.lightLevel);       
+  // Serial.print(F("DEBUG: Final currentData.lightLevel: "));
+  // Serial.println(currentData.lightLevel);       
 
   // Serial.print(F("DISPLAY DATA - ALL DUMMY: Temp: "));
   // Serial.print(currentData.temperatureF);
@@ -224,13 +224,6 @@ void loop() {
   
   // Update display every cycle (like hardware test does)
   if (displayManager.isTimeToUpdate()) {
-    Serial.print(F("Updating display, mode: "));
-    Serial.print((int)currentDisplayMode);
-    Serial.print(F(", settingsMode: "));
-    Serial.print(settingsMode);
-    Serial.print(F(", editingSettingValue: "));
-    Serial.println(editingSettingValue);
-    
     if (settingsMode) {
       displayManager.updateSettings(currentData, settingsMode, currentSetting, 
                                     settingTimeComponent, settingDateComponent, pendingDateTime, editingSettingValue);
@@ -552,19 +545,25 @@ void handleSettingChange(int delta) {
 }
 
 void checkWeatherAlerts() {
+  // Only check for new alerts if no alert is currently active
+  if (lightingEffects.isAlertActive()) {
+    return;
+  }
+  
   // Check for rapid weather changes and trigger alerts
   if (dataLogger.checkPressureAlert()) {
     audioManager.playPressureAlert();
-    lightingEffects.flashAlert({255, 255, 0}, 3); // Yellow flash
+    lightingEffects.startNonBlockingAlert(ALERT_PRESSURE, {255, 255, 0}, 3); // Yellow flash
+    displayManager.showAlert(ALERT_PRESSURE);
   }
-  
-  if (dataLogger.checkTemperatureAlert()) {
+  else if (dataLogger.checkTemperatureAlert()) {
     audioManager.playTemperatureAlert();
-    lightingEffects.flashAlert({255, 0, 0}, 3); // Red flash
+    lightingEffects.startNonBlockingAlert(ALERT_TEMPERATURE, {255, 0, 0}, 3); // Red flash
+    displayManager.showAlert(ALERT_TEMPERATURE);
   }
-  
-  if (dataLogger.checkRapidChange()) {
+  else if (dataLogger.checkRapidChange()) {
     audioManager.playWeatherAlert();
-    lightingEffects.flashAlert({0, 255, 255}, 3); // Cyan flash
+    lightingEffects.startNonBlockingAlert(ALERT_RAPID_CHANGE, {0, 255, 255}, 3); // Cyan flash
+    displayManager.showAlert(ALERT_RAPID_CHANGE);
   }
 }
