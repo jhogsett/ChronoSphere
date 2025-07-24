@@ -146,9 +146,12 @@ void AudioManager::playChimeSequence(const ChimeNote* sequence, uint8_t length) 
   isPlaying = true;
   playStartTime = millis();
   
+  // Call VS1053 directly to avoid isPlaying conflict
   for (uint8_t i = 0; i < length; i++) {
-    playNote(sequence[i].note, 127, sequence[i].duration);
-    delay(100); // Short pause between notes
+    musicPlayer.noteOn(0, sequence[i].note, 127);
+    delay(sequence[i].duration * 250); // Quarter note = 250ms
+    musicPlayer.noteOff(0, sequence[i].note, 127);
+    if (i < length - 1) delay(100); // Short pause between notes
   }
   
   isPlaying = false;
@@ -164,9 +167,11 @@ void AudioManager::playHourChime(uint8_t hour) {
   uint8_t strikes = hour % 12;
   if (strikes == 0) strikes = 12;
   
-  // Strike the hour
+  // Strike the hour - call VS1053 directly to avoid isPlaying conflicts
   for (uint8_t i = 0; i < strikes; i++) {
-    playNote(72, 127, 2); // High C, half note
+    musicPlayer.noteOn(0, 72, 127); // High C
+    delay(2 * 250); // Half note duration
+    musicPlayer.noteOff(0, 72, 127);
     if (i < strikes - 1) {
       delay(500); // Pause between strikes
     }
@@ -180,11 +185,15 @@ void AudioManager::playHalfHourChime() {
   isPlaying = true;
   playStartTime = millis();
   
-  // Play single hour bell note (E4 for Westminster, or high C for others)
+  // Play single hour bell note - call VS1053 directly to avoid isPlaying conflict
   if (currentChimeType == CHIME_WESTMINSTER) {
-    playNote(64, 127, 4); // E4, whole note duration
+    musicPlayer.noteOn(0, 64, 127);  // E4
+    delay(4 * 250); // Whole note duration
+    musicPlayer.noteOff(0, 64, 127);
   } else {
-    playNote(72, 127, 4); // High C, whole note duration
+    musicPlayer.noteOn(0, 72, 127);  // High C
+    delay(4 * 250); // Whole note duration  
+    musicPlayer.noteOff(0, 72, 127);
   }
   
   isPlaying = false;
