@@ -54,7 +54,7 @@ public:
   // Chime functions
   void checkAndPlayChime(DateTime currentTime);
   void playTestChime();
-  void playStartupChime(); // Play startup chime for main app initialization
+  void playStartupChime(uint8_t hour = 0); // Play startup chime for main app initialization
   void setChimeType(ChimeType type);
   void setChimeInstrument(MidiInstrument instrument);
   void setChimeFrequency(uint8_t frequency);

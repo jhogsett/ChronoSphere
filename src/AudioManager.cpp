@@ -61,11 +61,6 @@ bool AudioManager::init() {
     return false;
   }
   
-  Serial.println(F("✓ VS1053_MIDI initialized successfully!"));
-  Serial.print(F("Plugin size: "));
-  Serial.print(musicPlayer.getPluginSize());
-  Serial.println(F(" words"));
-  
   // Set default settings
   currentChimeType = CHIME_WESTMINSTER;
   currentInstrument = INSTRUMENT_TUBULAR_BELLS;
@@ -81,7 +76,6 @@ bool AudioManager::init() {
   musicPlayer.setInstrument(0, currentInstrument);
   delay(100);
   
-  Serial.println(F("Audio manager initialized"));
   return true;
 }
 
@@ -227,11 +221,12 @@ void AudioManager::playFullWestminsterHour(uint8_t hour) {
   uint8_t strikes = hour % 12;
   if (strikes == 0) strikes = 12;
   
-  // Strike the hour on Big Ben note (E4 = 64 for better audibility)
+  // Strike the hour on deeper Big Ben note (A3 = 57 for deeper, more resonant tone)
+  // Using same tubular bells instrument but much lower pitch for Big Ben effect
   for (uint8_t i = 0; i < strikes; i++) {
-    musicPlayer.noteOn(0, 64, 127);
+    musicPlayer.noteOn(0, 57, 127);  // A3 - deeper than the Westminster quarters
     delay(4 * 250); // Whole note duration
-    musicPlayer.noteOff(0, 64, 127);
+    musicPlayer.noteOff(0, 57, 127);
     if (i < strikes - 1) {
       delay(1000); // 1 second pause between hour strikes
     }
@@ -264,15 +259,56 @@ void AudioManager::playTestChime() {
   playChimeSequence(sequence, length);
 }
 
-void AudioManager::playStartupChime() {
-  // Play startup chime to test audio system and demonstrate Westminster enhancement
-  Serial.println(F("Playing startup chime..."));
+void AudioManager::playStartupChime(uint8_t hour) {
+  // Play startup chime to test audio system - Westminster quarters + hour strikes
+  
   if (currentChimeType == CHIME_WESTMINSTER) {
-    playFullWestminsterHour(12); // Play noon chime (12 strikes) as startup demo
+    // Play Westminster quarters followed by hour strikes for testing
+    if (isPlaying) return;
+    
+    isPlaying = true;
+    playStartTime = millis();
+    
+    // Play Change 4: G#4, E4, F#4, B3 (3rd quarter)
+    for (uint8_t i = 0; i < 4; i++) {
+      musicPlayer.noteOn(0, westminsterChange4[i].note, 127);
+      delay(westminsterChange4[i].duration * 250); // Quarter note = 250ms
+      musicPlayer.noteOff(0, westminsterChange4[i].note, 127);
+      if (i < 3) delay(100); // Short pause between notes
+    }
+    delay(500); // Pause between 3rd and 4th quarters
+    
+    // Play Change 5: B3, F#4, G#4, E4 (4th quarter)
+    for (uint8_t i = 0; i < 4; i++) {
+      musicPlayer.noteOn(0, westminsterChange5[i].note, 127);
+      delay(westminsterChange5[i].duration * 250); // Quarter note = 250ms
+      musicPlayer.noteOff(0, westminsterChange5[i].note, 127);
+      if (i < 3) delay(100); // Short pause between notes
+    }
+    
+    // If hour is provided (not 0), play hour strikes
+    if (hour > 0) {
+      delay(1000); // Longer pause before hour strikes
+      
+      uint8_t strikes = hour % 12;
+      if (strikes == 0) strikes = 12; // Convert 0 to 12 for 12-hour format
+      
+      // Strike the hour on deeper Big Ben note (A3 = 57 for deeper tone)
+      for (uint8_t i = 0; i < strikes; i++) {
+        musicPlayer.noteOn(0, 57, 127);  // A3 - deeper than Westminster quarters
+        delay(4 * 250); // Whole note duration
+        musicPlayer.noteOff(0, 57, 127);
+        if (i < strikes - 1) {
+          delay(1000); // 1 second pause between hour strikes
+        }
+      }
+    }
+    
+    isPlaying = false;
   } else {
-    playHourChime(12); // Play noon chime for other chime types
+    // For other chime types, just play the basic chime sequence
+    playTestChime();
   }
-  Serial.println(F("Startup chime completed"));
 }
 
 void AudioManager::setChimeType(ChimeType type) {
