@@ -41,7 +41,7 @@ bool MotorControl::init() {
   pendulumInterval = PENDULUM_SWING_PERIOD / 2;
   pendulumEnabled = true;
   
-  Serial.println(F("Motor control initialized"));
+  // Serial.println(F("Motor control initialized"));
   return true;
 }
 
@@ -146,7 +146,7 @@ void MotorControl::updatePendulum() {
 }
 
 void MotorControl::calibrateMinuteHand() {
-  Serial.println(F("Calibrating minute hand..."));
+  // Serial.println(F("Calibrating minute hand..."));
   
   // Move to known position (12 o'clock)
   for (int i = 0; i < STEPPER_STEPS_PER_HOUR / 4; i++) {
@@ -155,11 +155,11 @@ void MotorControl::calibrateMinuteHand() {
   }
   
   currentStepperPosition = 0;
-  Serial.println(F("Minute hand calibrated"));
+  // Serial.println(F("Minute hand calibrated"));
 }
 
 void MotorControl::calibratePendulum() {
-  Serial.println(F("Calibrating pendulum..."));
+  // Serial.println(F("Calibrating pendulum..."));
   
   // Center pendulum
   pendulumServo.write(90);
@@ -167,7 +167,7 @@ void MotorControl::calibratePendulum() {
   pendulumDirection = 1;
   
   delay(500);
-  Serial.println(F("Pendulum calibrated"));
+  // Serial.println(F("Pendulum calibrated"));
 }
 
 void MotorControl::setStepperSpeed(float stepsPerSecond) {
@@ -205,5 +205,5 @@ void MotorControl::emergencyStop() {
   pendulumServo.write(90);
   pendulumEnabled = false;
   
-  Serial.println(F("Emergency stop activated"));
+  // Serial.println(F("Emergency stop activated"));
 }

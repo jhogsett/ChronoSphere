@@ -376,15 +376,15 @@ void handleSettingChange(int delta) {
             break;
         }
         
-        // Show current time setting (minimal output)
-        Serial.print(F("Time: "));
-        Serial.print(pendingDateTime.getHour());
-        Serial.print(F(":"));
-        if (pendingDateTime.getMinute() < 10) Serial.print(F("0"));
-        Serial.print(pendingDateTime.getMinute());
-        Serial.print(F(":"));
-        if (pendingDateTime.getSecond() < 10) Serial.print(F("0"));
-        Serial.println(pendingDateTime.getSecond());
+        // // Show current time setting (minimal output)
+        // Serial.print(F("Time: "));
+        // Serial.print(pendingDateTime.getHour());
+        // Serial.print(F(":"));
+        // if (pendingDateTime.getMinute() < 10) Serial.print(F("0"));
+        // Serial.print(pendingDateTime.getMinute());
+        // Serial.print(F(":"));
+        // if (pendingDateTime.getSecond() < 10) Serial.print(F("0"));
+        // Serial.println(pendingDateTime.getSecond());
       }
       break;
       
@@ -430,30 +430,30 @@ void handleSettingChange(int delta) {
             break;
         }
         
-        // Show current date setting
-        Serial.print(F("Date: "));
-        Serial.print(pendingDateTime.getMonth());
-        Serial.print(F("/"));
-        Serial.print(pendingDateTime.getDay());
-        Serial.print(F("/"));
-        Serial.println(pendingDateTime.getYear());
+        // // Show current date setting
+        // Serial.print(F("Date: "));
+        // Serial.print(pendingDateTime.getMonth());
+        // Serial.print(F("/"));
+        // Serial.print(pendingDateTime.getDay());
+        // Serial.print(F("/"));
+        // Serial.println(pendingDateTime.getYear());
       }
       break;
       
     case SETTING_CHIME_TYPE:
-      Serial.println(F("Adjusting chime type"));
+      Serial.println(F("Adjusting chime type not implemented"));
       break;
       
     case SETTING_CHIME_INSTRUMENT:
-      Serial.println(F("Adjusting chime instrument"));
+      Serial.println(F("Adjusting chime instrument not implemented"));
       break;
       
     case SETTING_CHIME_FREQUENCY:
-      Serial.println(F("Adjusting chime frequency"));
+      Serial.println(F("Adjusting chime frequency not implemented"));
       break;
       
     default:
-      Serial.println(F("Setting not implemented"));
+      Serial.println(F("Setting not implemented not implemented"));
       break;
   }
 }
