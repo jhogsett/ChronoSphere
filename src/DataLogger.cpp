@@ -16,7 +16,7 @@ bool DataLogger::init() {
   // Load existing data from EEPROM
   loadFromEEPROM();
   
-  Serial.println(F("Data logger initialized"));
+  // Serial.println(F("Data logger initialized"));
   return true;
 }
 
@@ -96,7 +96,7 @@ void DataLogger::logHourlyData() {
     // Save to EEPROM
     saveToEEPROM();
     
-    Serial.println(F("Hourly data logged"));
+    // Serial.println(F("Hourly data logged"));
   }
   
   // Reset sample buffer
@@ -145,7 +145,7 @@ void DataLogger::logDailyData() {
     dailyData[currentDailyIndex] = record;
     currentDailyIndex = (currentDailyIndex + 1) % MAX_DAILY_RECORDS;
     
-    Serial.println(F("Daily data logged"));
+    // Serial.println(F("Daily data logged"));
   }
 }
 
@@ -264,7 +264,7 @@ void DataLogger::clearAllData() {
   currentDailyIndex = 0;
   currentSampleIndex = 0;
   
-  Serial.println(F("All data cleared"));
+  // Serial.println(F("All data cleared"));
 }
 
 bool DataLogger::isDataValid() {

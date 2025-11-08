@@ -42,7 +42,7 @@ bool LightingEffects::init() {
   alertFlashesRemaining = 0;
   alertTimer = 0;
   
-  Serial.println(F("Lighting effects initialized"));
+  // Serial.println(F("Lighting effects initialized"));
   return true;
 }
 
@@ -66,13 +66,13 @@ void LightingEffects::update(SensorData sensorData) {
     return;
   }
   
-  // DEBUG: Print current mode periodically
-  static unsigned long lastModeDebug = 0;
-  if (currentTime - lastModeDebug > 5000) { // Every 5 seconds
-    Serial.print(F("DEBUG: Current lighting mode: "));
-    Serial.println((int)currentMode);
-    lastModeDebug = currentTime;
-  }
+  // // DEBUG: Print current mode periodically
+  // static unsigned long lastModeDebug = 0;
+  // if (currentTime - lastModeDebug > 5000) { // Every 5 seconds
+  //   Serial.print(F("DEBUG: Current lighting mode: "));
+  //   Serial.println((int)currentMode);
+  //   lastModeDebug = currentTime;
+  // }
   
   switch (currentMode) {
     case LIGHTING_OFF:
@@ -112,12 +112,12 @@ void LightingEffects::update(SensorData sensorData) {
 void LightingEffects::updateTemperatureGradient(float temperature) {
   Color tempColor = temperatureToColor(temperature);
   
-  // DEBUG: Check if we're showing red due to high temperature
-  if (tempColor.red > 200 && tempColor.green < 100 && tempColor.blue < 100) {
-    Serial.print(F("DEBUG: Temperature gradient is RED due to temp: "));
-    Serial.print(temperature);
-    Serial.println(F("F"));
-  }
+  // // DEBUG: Check if we're showing red due to high temperature
+  // if (tempColor.red > 200 && tempColor.green < 100 && tempColor.blue < 100) {
+  //   Serial.print(F("DEBUG: Temperature gradient is RED due to temp: "));
+  //   Serial.print(temperature);
+  //   Serial.println(F("F"));
+  // }
   
   for (int i = 0; i < strip.numPixels(); i++) {
     // Create gradient effect with slight variation per pixel

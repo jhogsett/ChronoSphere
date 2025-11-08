@@ -43,7 +43,7 @@ bool DisplayManager::init() {
   currentAlertType = ALERT_NONE;
   alertDisplayStart = 0;
   
-  Serial.println(F("Display manager initialized"));
+  // Serial.println(F("Display manager initialized"));
   return true;
 }
 
@@ -150,8 +150,8 @@ void DisplayManager::displayTime(DateTime time) {
     sprintf(displayText, "%d%02d  %2d %02d  ", hour, time.getMinute(), month, day);
   }
   
-  Serial.print(F("Clock display: "));
-  Serial.println(displayText);
+  // Serial.print(F("Clock display: "));
+  // Serial.println(displayText);
   
   displayString(displayText);
 }
