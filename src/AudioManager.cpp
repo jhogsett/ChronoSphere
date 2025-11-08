@@ -70,7 +70,7 @@ bool AudioManager::init() {
   playStartTime = 0;
   
   // Set master volume (exactly like working example)
-  musicPlayer.setMasterVolume(0x20, 0x20);
+  musicPlayer.setMasterVolume(0x01, 0x01);
   
   // Set instrument on channel 0 (exactly like working example)
   musicPlayer.setInstrument(0, currentInstrument);
