@@ -5,11 +5,12 @@
 #define ROTARY_CLK_PIN 2
 #define ROTARY_DT_PIN 3
 #define ROTARY_SW_PIN 4
-#define STEPPER_PIN1 14
-#define STEPPER_PIN2 15
-#define STEPPER_PIN3 16
-#define STEPPER_PIN4 17
-#define SERVO_PIN 5
+// Pins 5, 14-17 reserved for future analog clock mechanism (stepper/servo deprecated)
+// #define STEPPER_PIN1 14  // DEPRECATED - removed, future analog clock will use different mechanism
+// #define STEPPER_PIN2 15  // DEPRECATED
+// #define STEPPER_PIN3 16  // DEPRECATED
+// #define STEPPER_PIN4 17  // DEPRECATED
+// #define SERVO_PIN 5      // DEPRECATED - removed due to servo seizure after millions of movements
 #define NEOPIXEL_PIN 6
 #define VS1053_CS 10    // Command interface
 #define VS1053_DCS 9    // Data interface
@@ -34,8 +35,7 @@
 #define DISPLAY_RED_BRIGHTNESS 15    // Red LEDs are dim
 
 // Timing Constants
-#define STEPPER_STEPS_PER_HOUR 2048
-#define PENDULUM_SWING_PERIOD 2000  // milliseconds
+// Motor control timing removed - stepper motor feature deprecated
 #define SENSOR_READ_INTERVAL 30000   // 30 seconds
 #define DISPLAY_UPDATE_INTERVAL 1000 // 1 second
 #define CHIME_CHECK_INTERVAL 60000   // 1 minute

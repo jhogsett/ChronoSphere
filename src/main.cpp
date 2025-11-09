@@ -64,10 +64,11 @@ void setup() {
     initSuccess = false;
   }
   
-  if (!motorControl.init()) {
-    Serial.println(F("ERROR: Motor control initialization failed"));
-    initSuccess = false;
-  }
+  // Motor control removed - servo and stepper motor features deprecated
+  // if (!motorControl.init()) {
+  //   Serial.println(F("ERROR: Motor control initialization failed"));
+  //   initSuccess = false;
+  // }
   
   if (!audioManager.init()) {
     Serial.println(F("ERROR: Audio initialization failed"));
@@ -88,10 +89,6 @@ void setup() {
     Serial.println(F("All modules initialized successfully"));
     displayManager.showStartupMessage();
     lightingEffects.showStartupSequence();
-    
-    // Calibrate motors
-    motorControl.calibrateMinuteHand();
-    motorControl.calibratePendulum();
     
     delay(2000); // Show startup message
     
@@ -211,13 +208,8 @@ void loop() {
     }
   }
   
-  // Update motors
-  DateTime now = currentData.currentTime;
-  motorControl.updateMinuteHand(now.getMinute(), now.getSecond());
-  
   // Update continuous systems
-  motorControl.update(); // Update pendulum and stepper motor
-  audioManager.update(); // Handle chime timing and playbook
+  audioManager.update(); // Handle chime timing and playback
   
   // Check for chimes
   audioManager.checkAndPlayChime(sensors.getCurrentTime());
