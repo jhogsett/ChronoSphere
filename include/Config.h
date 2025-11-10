@@ -5,20 +5,20 @@
 #define ROTARY_CLK_PIN 2
 #define ROTARY_DT_PIN 3
 #define ROTARY_SW_PIN 4
-// Pins 5, 14-17 reserved for future analog clock mechanism (stepper/servo deprecated)
+// Pins 5-6, 14-17 reserved for future analog clock mechanism
 // #define STEPPER_PIN1 14  // DEPRECATED - removed, future analog clock will use different mechanism
 // #define STEPPER_PIN2 15  // DEPRECATED
 // #define STEPPER_PIN3 16  // DEPRECATED
 // #define STEPPER_PIN4 17  // DEPRECATED
 // #define SERVO_PIN 5      // DEPRECATED - removed due to servo seizure after millions of movements
-#define NEOPIXEL_PIN 6
+// #define NEOPIXEL_PIN 6   // DEPRECATED - NeoPixel control moved to future clock display
 #define VS1053_CS 10    // Command interface
 #define VS1053_DCS 9    // Data interface
 #define VS1053_RESET 8  // Reset pin
 #define VS1053_DREQ 7   // Data request pin
 // IC2 reserved A4 A5
 // SPI reserved 13 12 11
-#define NEOPIXEL_COUNT 8  // Reduced from 12 to 8 to save RAM
+// #define NEOPIXEL_COUNT 8  // DEPRECATED - NeoPixels removed
 
 // I2C Addresses
 #define RTC_ADDRESS 0x68

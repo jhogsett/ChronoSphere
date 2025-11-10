@@ -1,9 +1,18 @@
 #ifndef LIGHTING_EFFECTS_H
 #define LIGHTING_EFFECTS_H
 
-#include <Adafruit_NeoPixel.h>
 #include "Config.h"
 #include "Sensors.h"
+
+// ============================================================================
+// LIGHTING EFFECTS - DEPRECATED
+// ============================================================================
+// NeoPixel LED control has been removed:
+// - Future analog clock display will handle LED control
+// - Preserving class structure for compatibility
+//
+// This class is kept as a stub that does nothing.
+// ============================================================================
 
 enum LightingMode {
   LIGHTING_OFF = 0,
@@ -22,74 +31,34 @@ struct Color {
 };
 
 class LightingEffects {
-private:
-  Adafruit_NeoPixel strip;
-  
-  LightingMode currentMode;
-  unsigned long lastUpdate;
-  uint8_t brightness;
-  uint16_t animationStep;
-  
-  // Current sensor data for use in alert transitions
-  SensorData currentSensorData;
-  
-  // Alert state machine
-  AlertType currentAlert;
-  AlertState alertState;
-  Color alertColor;
-  uint8_t alertFlashesRemaining;
-  unsigned long alertTimer;
-  static const unsigned long ALERT_FLASH_DURATION = 200; // ms
-  static const unsigned long ALERT_SUSTAINED_DURATION = 600000; // 10 minutes in ms
-  
-  // Color palettes
-  static const Color temperatureColors[];
-  static const Color weatherColors[];
-  
-  void updateSolidColor(Color color);
-  void updateTemperatureGradient(float temperature);
-  void updateWeatherIndicator(SensorData data);
-  void updateRainbow();
-  void updateBreathing();
-  void updateClockIndicator(DateTime time);
-  
-  // Alert state machine methods
-  void updateAlert();
-  void startAlert(AlertType type, Color color, uint8_t flashes);
-  
-  Color interpolateColor(Color color1, Color color2, float factor);
-  Color temperatureToColor(float tempF);
-  Color pressureToColor(float pressure);
-  uint32_t colorToUint32(Color color);
-
 public:
-  bool init();
-  void update(SensorData sensorData);
+  bool init() { return true; }  // Stub - always succeeds
+  void update(SensorData sensorData) {}  // Stub
   
-  // Mode control
-  void setMode(LightingMode mode);
-  LightingMode getMode();
+  // Mode control - all stubs
+  void setMode(LightingMode mode) {}
+  LightingMode getMode() { return LIGHTING_OFF; }
   
-  // Brightness control
-  void setBrightness(uint8_t brightness);
-  void adjustBrightnessForAmbientLight(float lightLevel);
+  // Brightness control - all stubs
+  void setBrightness(uint8_t brightness) {}
+  void adjustBrightnessForAmbientLight(float lightLevel) {}
   
-  // Manual color control
-  void setSolidColor(uint8_t red, uint8_t green, uint8_t blue);
-  void setPixelColor(uint8_t pixel, uint8_t red, uint8_t green, uint8_t blue);
+  // Manual color control - all stubs
+  void setSolidColor(uint8_t red, uint8_t green, uint8_t blue) {}
+  void setPixelColor(uint8_t pixel, uint8_t red, uint8_t green, uint8_t blue) {}
   
-  // Special effects
-  void flashAlert(Color color, uint8_t flashes);
-  void startNonBlockingAlert(AlertType type, Color color, uint8_t flashes);
-  bool isAlertActive();
-  AlertType getCurrentAlert();
-  void showStartupSequence();
-  void showErrorPattern();
+  // Special effects - all stubs
+  void flashAlert(Color color, uint8_t flashes) {}
+  void startNonBlockingAlert(AlertType type, Color color, uint8_t flashes) {}
+  bool isAlertActive() { return false; }
+  AlertType getCurrentAlert() { return ALERT_NONE; }
+  void showStartupSequence() {}
+  void showErrorPattern() {}
   
-  // Utility
-  void clear();
-  void show();
-  uint8_t getBrightness();
+  // Utility - all stubs
+  void clear() {}
+  void show() {}
+  uint8_t getBrightness() { return 0; }
 };
 
 #endif

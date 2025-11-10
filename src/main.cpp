@@ -34,6 +34,10 @@ bool hasDateTimeChanges = false;
 unsigned long lastMainLoop = 0;
 const unsigned long MAIN_LOOP_INTERVAL = 50; // 20Hz main loop
 
+// Alert cooldown tracking (replaces lightingEffects.isAlertActive() check)
+unsigned long lastAlertTime = 0;
+const unsigned long ALERT_COOLDOWN_MS = 600000; // 10 minutes (same as old NeoPixel alert duration)
+
 // Forward declarations
 void handleUserInput();
 void handleSettingChange(int delta);
@@ -80,15 +84,16 @@ void setup() {
     initSuccess = false;
   }
   
-  if (!lightingEffects.init()) {
-    Serial.println(F("ERROR: Lighting effects initialization failed"));
-    initSuccess = false;
-  }
+  // Lighting effects removed - NeoPixel control deprecated (future clock display will handle LEDs)
+  // if (!lightingEffects.init()) {
+  //   Serial.println(F("ERROR: Lighting effects initialization failed"));
+  //   initSuccess = false;
+  // }
   
   if (initSuccess) {
     Serial.println(F("All modules initialized successfully"));
     displayManager.showStartupMessage();
-    lightingEffects.showStartupSequence();
+    // lightingEffects.showStartupSequence();  // DEPRECATED - NeoPixel removed
     
     delay(2000); // Show startup message
     
@@ -111,7 +116,7 @@ void setup() {
   } else {
     Serial.println(F("FATAL: System initialization failed"));
     displayManager.showError("INIT");
-    lightingEffects.showErrorPattern();
+    // lightingEffects.showErrorPattern();  // DEPRECATED - NeoPixel removed
     while(1) delay(1000); // Halt system
   }
   
@@ -149,11 +154,11 @@ void loop() {
       // Update data logger
       dataLogger.update(realData);
       
-      // Update lighting effects
-      lightingEffects.update(realData);
+      // NeoPixel updates removed - LED control deprecated
+      // lightingEffects.update(realData);
       
       // Adjust lighting based on ambient light
-      lightingEffects.adjustBrightnessForAmbientLight(realData.lightLevel);
+      // lightingEffects.adjustBrightnessForAmbientLight(realData.lightLevel);
       displayManager.adjustBrightnessForAmbientLight(realData.lightLevel);
       
       // Check for alerts
@@ -451,27 +456,35 @@ void handleSettingChange(int delta) {
 }
 
 void checkWeatherAlerts() {
-  // Only check for new alerts if no alert is currently active
-  if (lightingEffects.isAlertActive()) {
-    return;
+  // Don't trigger new alerts if we're in the cooldown period
+  unsigned long currentMillis = millis();
+  if (currentMillis - lastAlertTime < ALERT_COOLDOWN_MS) {
+    return;  // Still in cooldown from previous alert
   }
   
   // Check for rapid weather changes and trigger alerts
   // Note: Priority order - pressure alerts override temperature alerts, 
   // which override rapid change alerts (only one alert active at a time)
+  bool alertTriggered = false;
+  
   if (dataLogger.checkPressureAlert()) {
     audioManager.playPressureAlert();
-    lightingEffects.startNonBlockingAlert(ALERT_PRESSURE, {255, 255, 0}, 3); // Yellow flash
     displayManager.showAlert(ALERT_PRESSURE);
+    alertTriggered = true;
   }
   else if (dataLogger.checkTemperatureAlert()) {
     audioManager.playTemperatureAlert();
-    lightingEffects.startNonBlockingAlert(ALERT_TEMPERATURE, {255, 0, 0}, 3); // Red flash
     displayManager.showAlert(ALERT_TEMPERATURE);
+    alertTriggered = true;
   }
   else if (dataLogger.checkRapidChange()) {
     audioManager.playWeatherAlert();
-    lightingEffects.startNonBlockingAlert(ALERT_RAPID_CHANGE, {0, 255, 255}, 3); // Cyan flash
     displayManager.showAlert(ALERT_RAPID_CHANGE);
+    alertTriggered = true;
+  }
+  
+  // Update cooldown timer if an alert was triggered
+  if (alertTriggered) {
+    lastAlertTime = currentMillis;
   }
 }
