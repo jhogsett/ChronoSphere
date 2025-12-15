@@ -8,6 +8,7 @@
 #include "AudioManager.h"
 #include "DataLogger.h"
 #include "LightingEffects.h"
+#include <HybridClock.h>
 
 // Global objects
 Sensors sensors;
@@ -17,6 +18,20 @@ MotorControl motorControl;
 AudioManager audioManager;
 DataLogger dataLogger;
 LightingEffects lightingEffects;
+
+// HybridClock instance (minimal configuration - no animations, no extra patterns)
+Clock hybridClock(
+    CLOCK_STEPS_PER_REV,     // 2048 steps per revolution
+    CLOCK_STEPPER_PIN1,      // First motor pin (14), others are sequential
+    CLOCK_SENSOR_PIN,        // Hall effect sensor pin (2)
+    CLOCK_NEOPIXEL_PIN,      // NeoPixel data pin (6)
+    CLOCK_HOUR_LEDS,         // 24 LEDs in hour ring
+    CLOCK_MINUTE_LEDS,       // 12 LEDs in minute ring
+    CLOCK_BRIGHTNESS,        // Brightness level (63)
+    CLOCK_MOTOR_SPEED,       // Motor speed (11 RPM)
+    50,                      // RTC check delay (ms)
+    false                    // Verbose logging disabled
+);
 
 // System state
 DisplayMode currentDisplayMode = MODE_ROLLING_CURRENT;  // Start in rolling mode for debugging
@@ -89,6 +104,23 @@ void setup() {
   //   Serial.println(F("ERROR: Lighting effects initialization failed"));
   //   initSuccess = false;
   // }
+  
+  // Initialize HybridClock (analog clock mechanism)
+  Serial.println(F("Initializing HybridClock..."));
+  hybridClock.setCenteringAdjustment(9);  // Adjust for your device
+  hybridClock.enableMicroCalibration(true, 4);  // Recalibrate every 4 hours
+  hybridClock.enableHourChangeAnimation(false);  // Disable animations to save flash
+  hybridClock.setDisplayPattern(ClockDisplay::DEFAULT_COMPLEMENT);  // Simple pattern
+  
+  // Get RTC pointer from Sensors module
+  DS3231* rtcPtr = sensors.getRTC();
+  if (rtcPtr != nullptr) {
+    hybridClock.begin(rtcPtr);
+    Serial.println(F("HybridClock initialized successfully"));
+  } else {
+    Serial.println(F("WARNING: RTC not available, HybridClock using fallback"));
+    hybridClock.begin();  // Use internal RTC if sensors not ready
+  }
   
   if (initSuccess) {
     Serial.println(F("All modules initialized successfully"));
@@ -177,8 +209,7 @@ void loop() {
   // currentData.pressure = 1013.0;                     // DUMMY
   // currentData.lightLevel = 150.0;                    // DUMMY
 
-  // currentData.temperatureF = realData.temperatureF;      
-  // currentData.feelsLikeF = realData.feelsLikeF;        
+  // currentData.temperatureF = realData.temperatureF;        // currentData.feelsLikeF = realData.feelsLikeF;        
   // strcpy(currentData.tempWord, realData.tempWord); 
   // currentData.humidity = realData.humidity;          
   // currentData.pressure = realData.pressure;        
@@ -215,6 +246,7 @@ void loop() {
   
   // Update continuous systems
   audioManager.update(); // Handle chime timing and playback
+  hybridClock.update();  // Update analog clock display and motor
   
   // Check for chimes
   audioManager.checkAndPlayChime(sensors.getCurrentTime());
