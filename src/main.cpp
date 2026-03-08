@@ -19,6 +19,16 @@ AudioManager audioManager;
 DataLogger dataLogger;
 LightingEffects lightingEffects;
 
+// Device-specific calibration
+// #define CHRONOSPHERE_DEVICE1
+#define CHRONOSPHERE_DEVICE2
+
+#if defined(CHRONOSPHERE_DEVICE1)
+  #define CENTERING_ADJUSTMENT 9
+#elif defined(CHRONOSPHERE_DEVICE2)
+  #define CENTERING_ADJUSTMENT 1
+#endif
+
 // HybridClock instance (minimal configuration - no animations, no extra patterns)
 Clock hybridClock(
     CLOCK_STEPS_PER_REV,     // 2048 steps per revolution
@@ -107,7 +117,7 @@ void setup() {
   
   // Initialize HybridClock (analog clock mechanism)
   Serial.println(F("Initializing HybridClock..."));
-  hybridClock.setCenteringAdjustment(9);  // Adjust for your device
+  hybridClock.setCenteringAdjustment(CENTERING_ADJUSTMENT);  // Adjust for your device
   hybridClock.enableMicroCalibration(true, 4);  // Recalibrate every 4 hours
   hybridClock.enableHourChangeAnimation(false);  // Disable animations to save flash
   hybridClock.setDisplayPattern(ClockDisplay::DEFAULT_COMPLEMENT);  // Simple pattern
