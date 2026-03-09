@@ -1,4 +1,5 @@
 #include "ClockMotor.h"
+#include <math.h>
 
 // Uncomment to enable Serial debugging output from the library
 // #define HYBRIDCLOCK_ENABLE_SERIAL
@@ -140,6 +141,7 @@ bool ClockMotor::calibrate(int centeringAdjustment, int slowDelay) {
     handPosition = 0.0;
     if (verboseLogging) SERIAL_PRINTLN(F("ClockMotor: Calibration complete"));
     
+    // for now always return true (change later if the value needs to be checked)
     return true;
 }
 
@@ -235,6 +237,8 @@ void ClockMotor::microCalibrate(int centeringAdjustment, int slowDelay) {
 }
 
 void ClockMotor::moveToMinute(int minute) {
+    // It is expected that this fractional value is eventually truncated to an int
+    // This is because the motor has only integer steps. There's no accumulation of drift here.
     float targetPosition = minute * (stepsPerRevolution / 60.0);
     float difference = targetPosition - handPosition;
     

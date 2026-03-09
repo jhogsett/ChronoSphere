@@ -116,6 +116,7 @@ void Clock::performCalibration() {
     }
 }
 
+// Note: percent should not exceed 100
 void Clock::enableQuietHours(bool enable, int start, int end, int percent) {
     quietHoursEnabled = enable;
     quietHoursStart = start;
@@ -141,6 +142,7 @@ void Clock::update() {
     // Update time from RTC
     if (!clockTime.update()) {
         // Second hasn't changed, nothing to do
+        // Keep the delay() call for when this library is used outside of ChronoSphere (where the delay is set to 0)
         delay(rtcCheckDelay);
         return;
     }

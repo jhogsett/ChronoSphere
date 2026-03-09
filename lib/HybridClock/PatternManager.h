@@ -37,7 +37,7 @@ public:
     bool shouldRotate(int currentHour);
     
     // Configuration
-    void setRotationInterval(int hours) { rotationIntervalHours = hours; }
+    void setRotationInterval(int hours) { rotationIntervalHours = hours; } // should be >= 1
     int getRotationInterval() const { return rotationIntervalHours; }
     
 #ifdef DEBUG_PATTERN_NAMES

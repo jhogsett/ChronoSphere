@@ -116,7 +116,7 @@ Display colors indicate comfort level:
 ### Build Instructions
 1. Clone or download this project
 2. Open in PlatformIO
-3. Select your target environment (`nanoatmega328` or `nano_every`)
+3. Select your target environment (`nano_every`)
 4. Build and upload to your Arduino
 
 ### Hardware Setup

@@ -217,7 +217,8 @@ void loop() {
   // currentData.pressure = 1013.0;                     // DUMMY
   // currentData.lightLevel = 150.0;                    // DUMMY
 
-  // currentData.temperatureF = realData.temperatureF;        // currentData.feelsLikeF = realData.feelsLikeF;        
+  // currentData.temperatureF = realData.temperatureF;        
+  // currentData.feelsLikeF = realData.feelsLikeF;        
   // strcpy(currentData.tempWord, realData.tempWord); 
   // currentData.humidity = realData.humidity;          
   // currentData.pressure = realData.pressure;        
