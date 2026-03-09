@@ -20,12 +20,12 @@ bool ClockTime::update() {
     int newMinute = rtc.getMinute();
     int newHour = rtc.getHour(h12Flag, pm);
     
-    // Check for changes
-    secondChanged = (newSecond != lastSecond);
-    minuteChanged = (newMinute != lastMinute);
-    hourChanged = (newHour != lastHour);
+    // Check for changes against current (not last) values
+    secondChanged = (newSecond != currentSecond);
+    minuteChanged = (newMinute != currentMinute);
+    hourChanged = (newHour != currentHour);
     
-    // Update tracking
+    // Shift current into last, then store new value
     if (secondChanged) {
         lastSecond = currentSecond;
         currentSecond = newSecond;

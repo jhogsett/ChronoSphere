@@ -4,8 +4,8 @@
 // #define HYBRIDCLOCK_ENABLE_SERIAL
 
 #ifdef HYBRIDCLOCK_ENABLE_SERIAL
-  #define SERIAL_PRINT(x) SERIAL_PRINT(x)
-  #define SERIAL_PRINTLN(x) SERIAL_PRINTLN(x)
+  #define SERIAL_PRINT(x) Serial.print(x)
+  #define SERIAL_PRINTLN(x) Serial.println(x)
 #else
   #define SERIAL_PRINT(x)
   #define SERIAL_PRINTLN(x)

@@ -24,7 +24,7 @@ public:
     int getHour() const { return currentHour; }
     int getMinute() const { return currentMinute; }
     int getSecond() const { return currentSecond; }
-    int getHour12() const { return (currentHour % 12) + 1; }
+    int getHour12() const { return (currentHour % 12) + 1; } // NOTE: the +1 is by design
     
     // Check for changes since last update
     bool hasSecondChanged() const { return secondChanged; }

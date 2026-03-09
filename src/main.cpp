@@ -33,7 +33,7 @@ LightingEffects lightingEffects;
 Clock hybridClock(
     CLOCK_STEPS_PER_REV,     // 2048 steps per revolution
     CLOCK_STEPPER_PIN1,      // First motor pin (14), others are sequential
-    CLOCK_SENSOR_PIN,        // Hall effect sensor pin (2)
+    CLOCK_SENSOR_PIN,        // Hall effect sensor pin (A6)
     CLOCK_NEOPIXEL_PIN,      // NeoPixel data pin (6)
     CLOCK_HOUR_LEDS,         // 24 LEDs in hour ring
     CLOCK_MINUTE_LEDS,       // 12 LEDs in minute ring
