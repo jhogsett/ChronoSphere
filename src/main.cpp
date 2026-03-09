@@ -44,7 +44,7 @@ Clock hybridClock(
 );
 
 // System state
-DisplayMode currentDisplayMode = MODE_ROLLING_CURRENT;  // Start in rolling mode for debugging
+DisplayMode currentDisplayMode = MODE_ROLLING_CURRENT;  // Start in rolling mode by default
 bool settingsMode = false;
 bool editingSettingValue = false;  // New: track if we're in a setting or editing its value
 SettingItem currentSetting = SETTING_TIME;
@@ -208,40 +208,6 @@ void loop() {
       Serial.println(F("WARNING: Sensor read failed"));
     }
   }
-  
-  // // DEBUGGING: Using ALL dummy data to test display stability
-  // currentData.temperatureF = 79.5;                   // DUMMY
-  // currentData.feelsLikeF = 77.8;                     // DUMMY
-  // strcpy(currentData.tempWord, "WARM");              // DUMMY
-  // currentData.humidity = 45.0;                       // DUMMY
-  // currentData.pressure = 1013.0;                     // DUMMY
-  // currentData.lightLevel = 150.0;                    // DUMMY
-
-  // currentData.temperatureF = realData.temperatureF;        
-  // currentData.feelsLikeF = realData.feelsLikeF;        
-  // strcpy(currentData.tempWord, realData.tempWord); 
-  // currentData.humidity = realData.humidity;          
-  // currentData.pressure = realData.pressure;        
-  // currentData.lightLevel = realData.lightLevel;
-  // currentData.currentTime = realData.currentTime;  // IMPORTANT: Restore the real time!
-
-  // DEBUG: Check final currentData lightLevel after restoration
-  // Serial.print(F("DEBUG: Final currentData.lightLevel: "));
-  // Serial.println(currentData.lightLevel);       
-
-  // Serial.print(F("DISPLAY DATA - ALL DUMMY: Temp: "));
-  // Serial.print(currentData.temperatureF);
-  // Serial.print(F("F, FeelsLike: "));
-  // Serial.print(currentData.feelsLikeF);
-  // Serial.print(F("F, Word: "));
-  // Serial.print(currentData.tempWord);
-  // Serial.print(F(", Humidity: "));
-  // Serial.print(currentData.humidity);
-  // Serial.print(F("%, Pressure: "));
-  // Serial.print(currentData.pressure);
-  // Serial.print(F(" hPa, Light: "));
-  // Serial.print(currentData.lightLevel);
-  // Serial.println(F(" lux"));
   
   // Update display every cycle (like hardware test does)
   if (displayManager.isTimeToUpdate()) {
@@ -479,19 +445,19 @@ void handleSettingChange(int delta) {
       break;
       
     case SETTING_CHIME_TYPE:
-      Serial.println(F("Adjusting chime type not implemented"));
+      // Serial.println(F("Adjusting chime type not implemented"));
       break;
       
     case SETTING_CHIME_INSTRUMENT:
-      Serial.println(F("Adjusting chime instrument not implemented"));
+      // Serial.println(F("Adjusting chime instrument not implemented"));
       break;
       
     case SETTING_CHIME_FREQUENCY:
-      Serial.println(F("Adjusting chime frequency not implemented"));
+      // Serial.println(F("Adjusting chime frequency not implemented"));
       break;
       
     default:
-      Serial.println(F("Setting not implemented not implemented"));
+      // Serial.println(F("Setting not implemented"));
       break;
   }
 }

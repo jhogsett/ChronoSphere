@@ -71,7 +71,8 @@ void AnimationManager::playWindmill(ClockDisplay& display, int newHour) {
     int stepDelay = 42;
     
     Adafruit_NeoPixel& pixels = display.getPixels();
-    int hourLeds = 24;  // This should not be changed due to fixed hardware configuration
+    // These should not be changed due to fixed hardware configuration
+    int hourLeds = 24;  
     int minuteLeds = 12;
     
     for (int step = 0; step < rotationSteps; step++) {
