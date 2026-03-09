@@ -61,7 +61,8 @@ const unsigned long MAIN_LOOP_INTERVAL = 50; // 20Hz main loop
 
 // Alert cooldown tracking (replaces lightingEffects.isAlertActive() check)
 unsigned long lastAlertTime = 0;
-const unsigned long ALERT_COOLDOWN_MS = 600000; // 10 minutes (same as old NeoPixel alert duration)
+bool alertEverFired = false;
+const unsigned long ALERT_COOLDOWN_MS = 600000; // 10 minutes
 
 // Forward declarations
 void handleUserInput();
@@ -122,15 +123,8 @@ void setup() {
   hybridClock.enableHourChangeAnimation(false);  // Disable animations to save flash
   hybridClock.setDisplayPattern(ClockDisplay::DEFAULT_COMPLEMENT);  // Simple pattern
   
-  // Get RTC pointer from Sensors module
-  DS3231* rtcPtr = sensors.getRTC();
-  if (rtcPtr != nullptr) {
-    hybridClock.begin(rtcPtr);
-    Serial.println(F("HybridClock initialized successfully"));
-  } else {
-    Serial.println(F("WARNING: RTC not available, HybridClock using fallback"));
-    hybridClock.begin();  // Use internal RTC if sensors not ready
-  }
+  hybridClock.begin();
+  Serial.println(F("HybridClock initialized successfully"));
   
   if (initSuccess) {
     Serial.println(F("All modules initialized successfully"));
@@ -500,7 +494,7 @@ void handleSettingChange(int delta) {
 void checkWeatherAlerts() {
   // Don't trigger new alerts if we're in the cooldown period
   unsigned long currentMillis = millis();
-  if (currentMillis - lastAlertTime < ALERT_COOLDOWN_MS) {
+  if (alertEverFired && (currentMillis - lastAlertTime < ALERT_COOLDOWN_MS)) {
     return;  // Still in cooldown from previous alert
   }
   
@@ -528,5 +522,6 @@ void checkWeatherAlerts() {
   // Update cooldown timer if an alert was triggered
   if (alertTriggered) {
     lastAlertTime = currentMillis;
+    alertEverFired = true;
   }
 }

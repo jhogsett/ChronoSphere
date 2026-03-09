@@ -39,9 +39,8 @@ public:
           int rtcCheckDelay = 50,
           bool verboseLogging = false);
     
-    // Initialize clock system with external RTC
-    // If rtcPtr is nullptr, will use internal RTC instance
-    void begin(DS3231* rtcPtr = nullptr);
+    // Initialize clock system
+    void begin();
     
     // Update clock - call this in loop()
     void update();
@@ -77,9 +76,6 @@ private:
     ClockDisplay clockDisplay;
     AnimationManager animationManager;
     PatternManager patternManager;
-    
-    DS3231* externalRTC;
-    bool usingExternalRTC;
     
     // Configuration
     int centeringAdjustment;

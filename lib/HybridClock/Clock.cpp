@@ -19,8 +19,6 @@ Clock::Clock(int stepsPerRev, int firstMotorPin,
              uint8_t brightness, int motorSpeed, int rtcCheckDelay, bool verboseLogging)
     : clockMotor(stepsPerRev, firstMotorPin, firstMotorPin+1, firstMotorPin+2, firstMotorPin+3, sensorPin, motorSpeed, verboseLogging)
     , clockDisplay(neopixelPin, hourLeds, minuteLeds, brightness)
-    , externalRTC(nullptr)
-    , usingExternalRTC(false)
     , centeringAdjustment(0)
     , slowDelay(0)
     , rtcCheckDelay(rtcCheckDelay)
@@ -38,18 +36,8 @@ Clock::Clock(int stepsPerRev, int firstMotorPin,
     , lastHourForAnimation(-1) {
 }
 
-void Clock::begin(DS3231* rtcPtr) {
+void Clock::begin() {
     SERIAL_PRINTLN(F("=== Clock System Starting ==="));
-    
-    // Store RTC reference
-    if (rtcPtr != nullptr) {
-        externalRTC = rtcPtr;
-        usingExternalRTC = true;
-        if (verboseLogging) SERIAL_PRINTLN(F("Clock: Using external RTC instance"));
-    } else {
-        usingExternalRTC = false;
-        if (verboseLogging) SERIAL_PRINTLN(F("Clock: Using internal RTC instance"));
-    }
     
     // Initialize components
     clockTime.begin();
