@@ -1,4 +1,5 @@
 #include "ClockDisplay.h"
+#include <math.h>
 
 // Uncomment to enable extra LED patterns (saves ~1KB Flash)
 // #define HYBRIDCLOCK_ENABLE_EXTRA_PATTERNS
@@ -227,15 +228,25 @@ void ClockDisplay::displayColorDrift() { displayDefaultComplement(); }
 #endif // HYBRIDCLOCK_ENABLE_EXTRA_PATTERNS
 
 void ClockDisplay::showHourIndicators(int hour12) {
-    // Light up LEDs for all hours from 1 through current hour (except 12)
-    // NOTE: this presumes 24 LEDs and will not work with a different number of LEDs
+    // Lights an arc of even-indexed LEDs from the 1 o'clock position clockwise
+    // to the current hour position, like filling a clock face up to the current hour.
+    //
+    // LED mapping (24 LEDs, 2 per hour): hour N -> LED (N*2)
+    //   LED 0  = 12 o'clock, LED 2  = 1 o'clock, ..., LED 22 = 11 o'clock
+    //
+    // hour12 is sourced from getHour12() which returns (hour % 12) + 1.
+    // The +1 offset means i < hour12 correctly includes the current hour's LED
+    // (e.g. hour 6 -> hour12=7, so i=1..6 all fire, lighting LED 12 at 6 o'clock).
+    //
+    // NOTE: assumes exactly 24 LEDs; will not work correctly with a different count.
     for (int i = 1; i < 12; i++) {
         if (i < hour12) {
             pixels.setPixelColor(i * 2, pixels.Color(128, 128, 128));
         }
     }
     
-    // Special case for 12 o'clock
+    // 12 o'clock special case: getHour12() returns 1 for noon/midnight,
+    // so the loop above fires nothing. Light LED 0 (top of clock) directly.
     if (hour12 == 1) {
         pixels.setPixelColor(0, pixels.Color(128, 128, 128));
     }

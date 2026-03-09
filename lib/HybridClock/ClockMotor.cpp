@@ -26,7 +26,13 @@ ClockMotor::ClockMotor(int stepsPerRev, int pin1, int pin2, int pin3, int pin4,
 void ClockMotor::begin() {
     pinMode(sensorPin, INPUT_PULLUP);
     
-    // Initialize motor pins array
+    // Set motor pins to OUTPUT before any reads/writes
+    for (int i = 0; i < 4; i++) {
+        pinMode(firstMotorPin + i, OUTPUT);
+        digitalWrite(firstMotorPin + i, LOW);
+    }
+    
+    // Initialize saved pin state array to match (all LOW)
     for (int i = 0; i < 4; i++) {
         motorPins[i] = LOW;
     }
@@ -239,7 +245,7 @@ void ClockMotor::moveToMinute(int minute) {
         difference += stepsPerRevolution;
     }
     
-    if (abs(difference) > 0.5) {
+    if (fabsf(difference) > 0.5f) {
         moveSteps((int)difference);
     }
 }

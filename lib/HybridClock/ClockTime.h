@@ -2,6 +2,7 @@
 #define CLOCK_TIME_H
 
 #include <Arduino.h>
+#include <Wire.h>
 #include <DS3231-RTC.h>
 
 /**

@@ -39,7 +39,7 @@ Clock hybridClock(
     CLOCK_MINUTE_LEDS,       // 12 LEDs in minute ring
     CLOCK_BRIGHTNESS,        // Brightness level (63)
     CLOCK_MOTOR_SPEED,       // Motor speed (11 RPM)
-    50,                      // RTC check delay (ms)
+    0,                       // RTC check delay: 0ms (main loop handles timing)
     false                    // Verbose logging disabled
 );
 
@@ -117,14 +117,18 @@ void setup() {
   // }
   
   // Initialize HybridClock (analog clock mechanism)
-  Serial.println(F("Initializing HybridClock..."));
-  hybridClock.setCenteringAdjustment(CENTERING_ADJUSTMENT);  // Adjust for your device
-  hybridClock.enableMicroCalibration(true, 4);  // Recalibrate every 4 hours
-  hybridClock.enableHourChangeAnimation(false);  // Disable animations to save flash
-  hybridClock.setDisplayPattern(ClockDisplay::DEFAULT_COMPLEMENT);  // Simple pattern
-  
-  hybridClock.begin();
-  Serial.println(F("HybridClock initialized successfully"));
+  // Only run calibration/motor movement if other hardware is healthy
+  if (initSuccess) {
+    Serial.println(F("Initializing HybridClock..."));
+    hybridClock.setCenteringAdjustment(CENTERING_ADJUSTMENT);  // Adjust for your device
+    hybridClock.enableMicroCalibration(true, 4);  // Recalibrate every 4 hours
+    hybridClock.enableHourChangeAnimation(false);  // Disable animations to save flash
+    hybridClock.setDisplayPattern(ClockDisplay::DEFAULT_COMPLEMENT);  // Simple pattern
+    hybridClock.begin();
+    Serial.println(F("HybridClock initialized successfully"));
+  } else {
+    Serial.println(F("Skipping HybridClock init due to earlier failure"));
+  }
   
   if (initSuccess) {
     Serial.println(F("All modules initialized successfully"));
