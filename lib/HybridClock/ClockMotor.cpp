@@ -46,14 +46,11 @@ void ClockMotor::powerOn() {
 }
 
 void ClockMotor::powerOff() {
-    if (motorPowered || !motorPowered) { // Always save state
-        // Save current motor pin states
-        for (int i = 0; i < 4; i++) {
-            motorPins[i] = digitalRead(firstMotorPin + i);
-            digitalWrite(firstMotorPin + i, LOW);
-        }
-        motorPowered = false;
+    for (int i = 0; i < 4; i++) {
+        motorPins[i] = digitalRead(firstMotorPin + i);
+        digitalWrite(firstMotorPin + i, LOW);
     }
+    motorPowered = false;
 }
 
 bool ClockMotor::calibrate(int centeringAdjustment, int slowDelay) {

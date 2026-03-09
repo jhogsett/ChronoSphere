@@ -228,6 +228,7 @@ void ClockDisplay::displayColorDrift() { displayDefaultComplement(); }
 
 void ClockDisplay::showHourIndicators(int hour12) {
     // Light up LEDs for all hours from 1 through current hour (except 12)
+    // NOTE: this presumes 24 LEDs and will not work with a different number of LEDs
     for (int i = 1; i < 12; i++) {
         if (i < hour12) {
             pixels.setPixelColor(i * 2, pixels.Color(128, 128, 128));

@@ -19,7 +19,7 @@
  *   Clock clock;
  *   
  *   void setup() {
- *     clock.begin(&myRTC);
+ *     clock.begin();
  *   }
  *   
  *   void loop() {
