@@ -8,6 +8,7 @@
 #include "AudioManager.h"
 #include "DataLogger.h"
 #include "LightingEffects.h"
+#include <HybridClock.h>
 
 // Global objects
 Sensors sensors;
@@ -18,8 +19,32 @@ AudioManager audioManager;
 DataLogger dataLogger;
 LightingEffects lightingEffects;
 
+// Device-specific calibration
+// #define CHRONOSPHERE_DEVICE1
+#define CHRONOSPHERE_DEVICE2
+
+#if defined(CHRONOSPHERE_DEVICE1)
+  #define CENTERING_ADJUSTMENT 9
+#elif defined(CHRONOSPHERE_DEVICE2)
+  #define CENTERING_ADJUSTMENT 1
+#endif
+
+// HybridClock instance (minimal configuration - no animations, no extra patterns)
+Clock hybridClock(
+    CLOCK_STEPS_PER_REV,     // 2048 steps per revolution
+    CLOCK_STEPPER_PIN1,      // First motor pin (14), others are sequential
+    CLOCK_SENSOR_PIN,        // Hall effect sensor pin (A6)
+    CLOCK_NEOPIXEL_PIN,      // NeoPixel data pin (6)
+    CLOCK_HOUR_LEDS,         // 24 LEDs in hour ring
+    CLOCK_MINUTE_LEDS,       // 12 LEDs in minute ring
+    CLOCK_BRIGHTNESS,        // Brightness level (63)
+    CLOCK_MOTOR_SPEED,       // Motor speed (11 RPM)
+    0,                       // RTC check delay: 0ms (main loop handles timing)
+    false                    // Verbose logging disabled
+);
+
 // System state
-DisplayMode currentDisplayMode = MODE_ROLLING_CURRENT;  // Start in rolling mode for debugging
+DisplayMode currentDisplayMode = MODE_ROLLING_CURRENT;  // Start in rolling mode by default
 bool settingsMode = false;
 bool editingSettingValue = false;  // New: track if we're in a setting or editing its value
 SettingItem currentSetting = SETTING_TIME;
@@ -36,7 +61,8 @@ const unsigned long MAIN_LOOP_INTERVAL = 50; // 20Hz main loop
 
 // Alert cooldown tracking (replaces lightingEffects.isAlertActive() check)
 unsigned long lastAlertTime = 0;
-const unsigned long ALERT_COOLDOWN_MS = 600000; // 10 minutes (same as old NeoPixel alert duration)
+bool alertEverFired = false;
+const unsigned long ALERT_COOLDOWN_MS = 600000; // 10 minutes
 
 // Forward declarations
 void handleUserInput();
@@ -89,6 +115,20 @@ void setup() {
   //   Serial.println(F("ERROR: Lighting effects initialization failed"));
   //   initSuccess = false;
   // }
+  
+  // Initialize HybridClock (analog clock mechanism)
+  // Only run calibration/motor movement if other hardware is healthy
+  if (initSuccess) {
+    Serial.println(F("Initializing HybridClock..."));
+    hybridClock.setCenteringAdjustment(CENTERING_ADJUSTMENT);  // Adjust for your device
+    hybridClock.enableMicroCalibration(true, 4);  // Recalibrate every 4 hours
+    hybridClock.enableHourChangeAnimation(false);  // Disable animations to save flash
+    hybridClock.setDisplayPattern(ClockDisplay::DEFAULT_COMPLEMENT);  // Simple pattern
+    hybridClock.begin();
+    Serial.println(F("HybridClock initialized successfully"));
+  } else {
+    Serial.println(F("Skipping HybridClock init due to earlier failure"));
+  }
   
   if (initSuccess) {
     Serial.println(F("All modules initialized successfully"));
@@ -169,40 +209,6 @@ void loop() {
     }
   }
   
-  // // DEBUGGING: Using ALL dummy data to test display stability
-  // currentData.temperatureF = 79.5;                   // DUMMY
-  // currentData.feelsLikeF = 77.8;                     // DUMMY
-  // strcpy(currentData.tempWord, "WARM");              // DUMMY
-  // currentData.humidity = 45.0;                       // DUMMY
-  // currentData.pressure = 1013.0;                     // DUMMY
-  // currentData.lightLevel = 150.0;                    // DUMMY
-
-  // currentData.temperatureF = realData.temperatureF;      
-  // currentData.feelsLikeF = realData.feelsLikeF;        
-  // strcpy(currentData.tempWord, realData.tempWord); 
-  // currentData.humidity = realData.humidity;          
-  // currentData.pressure = realData.pressure;        
-  // currentData.lightLevel = realData.lightLevel;
-  // currentData.currentTime = realData.currentTime;  // IMPORTANT: Restore the real time!
-
-  // DEBUG: Check final currentData lightLevel after restoration
-  // Serial.print(F("DEBUG: Final currentData.lightLevel: "));
-  // Serial.println(currentData.lightLevel);       
-
-  // Serial.print(F("DISPLAY DATA - ALL DUMMY: Temp: "));
-  // Serial.print(currentData.temperatureF);
-  // Serial.print(F("F, FeelsLike: "));
-  // Serial.print(currentData.feelsLikeF);
-  // Serial.print(F("F, Word: "));
-  // Serial.print(currentData.tempWord);
-  // Serial.print(F(", Humidity: "));
-  // Serial.print(currentData.humidity);
-  // Serial.print(F("%, Pressure: "));
-  // Serial.print(currentData.pressure);
-  // Serial.print(F(" hPa, Light: "));
-  // Serial.print(currentData.lightLevel);
-  // Serial.println(F(" lux"));
-  
   // Update display every cycle (like hardware test does)
   if (displayManager.isTimeToUpdate()) {
     if (settingsMode) {
@@ -215,6 +221,7 @@ void loop() {
   
   // Update continuous systems
   audioManager.update(); // Handle chime timing and playback
+  hybridClock.update();  // Update analog clock display and motor
   
   // Check for chimes
   audioManager.checkAndPlayChime(sensors.getCurrentTime());
@@ -438,19 +445,19 @@ void handleSettingChange(int delta) {
       break;
       
     case SETTING_CHIME_TYPE:
-      Serial.println(F("Adjusting chime type not implemented"));
+      // Serial.println(F("Adjusting chime type not implemented"));
       break;
       
     case SETTING_CHIME_INSTRUMENT:
-      Serial.println(F("Adjusting chime instrument not implemented"));
+      // Serial.println(F("Adjusting chime instrument not implemented"));
       break;
       
     case SETTING_CHIME_FREQUENCY:
-      Serial.println(F("Adjusting chime frequency not implemented"));
+      // Serial.println(F("Adjusting chime frequency not implemented"));
       break;
       
     default:
-      Serial.println(F("Setting not implemented not implemented"));
+      // Serial.println(F("Setting not implemented"));
       break;
   }
 }
@@ -458,7 +465,7 @@ void handleSettingChange(int delta) {
 void checkWeatherAlerts() {
   // Don't trigger new alerts if we're in the cooldown period
   unsigned long currentMillis = millis();
-  if (currentMillis - lastAlertTime < ALERT_COOLDOWN_MS) {
+  if (alertEverFired && (currentMillis - lastAlertTime < ALERT_COOLDOWN_MS)) {
     return;  // Still in cooldown from previous alert
   }
   
@@ -486,5 +493,6 @@ void checkWeatherAlerts() {
   // Update cooldown timer if an alert was triggered
   if (alertTriggered) {
     lastAlertTime = currentMillis;
+    alertEverFired = true;
   }
 }

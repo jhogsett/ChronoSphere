@@ -5,20 +5,31 @@
 #define ROTARY_CLK_PIN 2
 #define ROTARY_DT_PIN 3
 #define ROTARY_SW_PIN 4
-// Pins 5-6, 14-17 reserved for future analog clock mechanism
-// #define STEPPER_PIN1 14  // DEPRECATED - removed, future analog clock will use different mechanism
-// #define STEPPER_PIN2 15  // DEPRECATED
-// #define STEPPER_PIN3 16  // DEPRECATED
-// #define STEPPER_PIN4 17  // DEPRECATED
+
+// HybridClock Pin Definitions (analog clock mechanism)
+#define CLOCK_SENSOR_PIN 20       // Hall effect sensor for motor calibration (A6/D20)
+#define CLOCK_NEOPIXEL_PIN 6      // NeoPixel data pin for clock LED rings
+#define CLOCK_STEPPER_PIN1 14     // Stepper motor IN1 (A0)
+#define CLOCK_STEPPER_PIN2 15     // Stepper motor IN2 (A1)
+#define CLOCK_STEPPER_PIN3 16     // Stepper motor IN3 (A2)
+#define CLOCK_STEPPER_PIN4 17     // Stepper motor IN4 (A3)
+
+// HybridClock Configuration
+#define CLOCK_STEPS_PER_REV 2048  // 28BYJ-48 stepper motor steps per revolution
+#define CLOCK_HOUR_LEDS 24        // LEDs in outer (hour) ring
+#define CLOCK_MINUTE_LEDS 12      // LEDs in inner (minute) ring
+#define CLOCK_BRIGHTNESS 63       // LED brightness (0-255)
+#define CLOCK_MOTOR_SPEED 11      // Motor speed (RPM)
+
+// Deprecated motor/LED pins (kept for reference)
 // #define SERVO_PIN 5      // DEPRECATED - removed due to servo seizure after millions of movements
-// #define NEOPIXEL_PIN 6   // DEPRECATED - NeoPixel control moved to future clock display
+
 #define VS1053_CS 10    // Command interface
 #define VS1053_DCS 9    // Data interface
 #define VS1053_RESET 8  // Reset pin
 #define VS1053_DREQ 7   // Data request pin
 // IC2 reserved A4 A5
 // SPI reserved 13 12 11
-// #define NEOPIXEL_COUNT 8  // DEPRECATED - NeoPixels removed
 
 // I2C Addresses
 #define RTC_ADDRESS 0x68

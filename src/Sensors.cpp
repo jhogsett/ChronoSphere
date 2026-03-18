@@ -18,6 +18,7 @@ bool Sensors::init() {
   
   // Try to read the year as a test
   uint8_t year = rtc.getYear();
+  
   if (year > 99) { // Invalid year suggests RTC not working
     Serial.println(F("RTC initialization failed"));
     return false;

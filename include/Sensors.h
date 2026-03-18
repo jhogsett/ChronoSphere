@@ -44,6 +44,7 @@ public:
   // Time management
   bool setDateTime(DateTime newDateTime);
   DateTime getCurrentTime();
+  DS3231* getRTC() { return &rtc; }
   
   // Temperature calculations
   float celsiusToFahrenheit(float celsius);
