@@ -134,7 +134,7 @@ void setup() {
     hybridClock.enableQuietHours(true, QUIET_HOURS_START, QUIET_HOURS_END, QUIET_HOURS_BRIGHTNESS);  // Dim LEDs 10PM-8AM
     hybridClock.setDisplayPattern(ClockDisplay::DEFAULT_COMPLEMENT);  // Simple pattern
     hybridClock.begin();
-    hybridClock.update();  // Show hour and background pattern LEDs immediately after init
+    hybridClock.update(true);  // Force display refresh so LEDs are lit immediately after init
     Serial.println(F("HybridClock initialized successfully"));
   } else {
     Serial.println(F("Skipping HybridClock init due to earlier failure"));

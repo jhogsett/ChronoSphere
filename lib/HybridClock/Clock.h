@@ -43,7 +43,8 @@ public:
     void begin();
     
     // Update clock - call this in loop()
-    void update();
+    // Pass force=true to unconditionally refresh the display (e.g. immediately after begin())
+    void update(bool force = false);
     
     // Access to components
     ClockTime& getTime() { return clockTime; }
