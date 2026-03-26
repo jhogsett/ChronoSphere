@@ -543,6 +543,13 @@ void DisplayManager::showError(const char* errorCode) {
   displayString(errorText);
 }
 
+void DisplayManager::showInitFailure(const char* causes) {
+  // Format: "F " (2 chars) + up to 10 chars of cause info = 12 chars total
+  char text[13];
+  snprintf(text, sizeof(text), "F %-10s", causes);
+  displayString(text);
+}
+
 void DisplayManager::showSetting(SettingItem setting, int value) {
   char settingText[13];
   sprintf(settingText, "SET %4d TING", value);

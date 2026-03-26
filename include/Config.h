@@ -21,6 +21,11 @@
 #define CLOCK_BRIGHTNESS 63       // LED brightness (0-255)
 #define CLOCK_MOTOR_SPEED 11      // Motor speed (RPM)
 
+// Quiet Hours (nighttime LED dimming)
+#define QUIET_HOURS_START 22      // Start of quiet hours (10 PM, 24-hour)
+#define QUIET_HOURS_END 8         // End of quiet hours (8 AM, 24-hour)
+#define QUIET_HOURS_BRIGHTNESS 50 // Brightness percentage during quiet hours
+
 // Deprecated motor/LED pins (kept for reference)
 // #define SERVO_PIN 5      // DEPRECATED - removed due to servo seizure after millions of movements
 
