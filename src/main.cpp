@@ -341,6 +341,7 @@ void handleUserInput() {
         displayManager.setMode(currentDisplayMode);
       }
     }
+    displayManager.forceNextUpdate();  // Bypass 1-second interval for immediate feedback
   }
 }
 

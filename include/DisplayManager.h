@@ -48,6 +48,7 @@ public:
   void setMode(DisplayMode mode);
   DisplayMode getCurrentMode();
   bool isTimeToUpdate();
+  void forceNextUpdate();
   
   // Display methods
   void displayTimeOnly(DateTime time);

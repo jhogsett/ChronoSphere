@@ -125,6 +125,10 @@ bool DisplayManager::isTimeToUpdate() {
   return (millis() - lastUpdateTime >= DISPLAY_UPDATE_INTERVAL);
 }
 
+void DisplayManager::forceNextUpdate() {
+  lastUpdateTime = 0;
+}
+
 void DisplayManager::clearAllDisplays() {
   displayGroup->clear();
 }
