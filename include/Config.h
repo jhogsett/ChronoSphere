@@ -2,8 +2,8 @@
 #define CONFIG_H
 
 // Pin Definitions
-#define ROTARY_CLK_PIN 3
-#define ROTARY_DT_PIN 2
+#define ROTARY_CLK_PIN 2
+#define ROTARY_DT_PIN 3
 #define ROTARY_SW_PIN 4
 
 // HybridClock Pin Definitions (analog clock mechanism)
