@@ -187,9 +187,9 @@ void AudioManager::playHalfHourChime() {
   
   // Play single hour bell note - call VS1053 directly to avoid isPlaying conflict
   if (currentChimeType == CHIME_WESTMINSTER) {
-    musicPlayer.noteOn(0, 64, 127);  // E4
+    musicPlayer.noteOn(0, 57, 127);  // A3 - matches the top-of-hour bell strikes
     delay(4 * 250); // Whole note duration
-    musicPlayer.noteOff(0, 64, 127);
+    musicPlayer.noteOff(0, 57, 127);
   } else {
     musicPlayer.noteOn(0, 72, 127);  // High C
     delay(4 * 250); // Whole note duration  

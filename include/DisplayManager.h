@@ -60,6 +60,7 @@ public:
   // Special displays
   void showStartupMessage();
   void showError(const char* errorCode);
+  void showInitFailure(const char* causes);  // Shows "F " + up to 10 chars of failure cause
   void showSetting(SettingItem setting, int value);
   
   // Alert displays

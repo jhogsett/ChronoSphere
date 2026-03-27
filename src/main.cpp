@@ -78,19 +78,23 @@ void setup() {
   
   // Initialize all modules
   bool initSuccess = true;
+  char initFailCauses[11] = "";  // Accumulates short codes for failures, max 10 chars + NUL
   
   if (!sensors.init()) {
     Serial.println(F("ERROR: Sensors initialization failed"));
+    strncat(initFailCauses, "SENS ", sizeof(initFailCauses) - strlen(initFailCauses) - 1);
     initSuccess = false;
   }
   
   if (!displayManager.init()) {
     Serial.println(F("ERROR: Display initialization failed"));
+    strncat(initFailCauses, "DISP ", sizeof(initFailCauses) - strlen(initFailCauses) - 1);
     initSuccess = false;
   }
   
   if (!userInput.init()) {
     Serial.println(F("ERROR: User input initialization failed"));
+    strncat(initFailCauses, "INP ", sizeof(initFailCauses) - strlen(initFailCauses) - 1);
     initSuccess = false;
   }
   
@@ -102,11 +106,13 @@ void setup() {
   
   if (!audioManager.init()) {
     Serial.println(F("ERROR: Audio initialization failed"));
+    strncat(initFailCauses, "AUD ", sizeof(initFailCauses) - strlen(initFailCauses) - 1);
     initSuccess = false;
   }
   
   if (!dataLogger.init()) {
     Serial.println(F("ERROR: Data logger initialization failed"));
+    strncat(initFailCauses, "DLOG", sizeof(initFailCauses) - strlen(initFailCauses) - 1);
     initSuccess = false;
   }
   
@@ -119,26 +125,28 @@ void setup() {
   // Initialize HybridClock (analog clock mechanism)
   // Only run calibration/motor movement if other hardware is healthy
   if (initSuccess) {
+    Serial.println(F("All modules initialized successfully"));
+    displayManager.showStartupMessage();
     Serial.println(F("Initializing HybridClock..."));
     hybridClock.setCenteringAdjustment(CENTERING_ADJUSTMENT);  // Adjust for your device
     hybridClock.enableMicroCalibration(true, 4);  // Recalibrate every 4 hours
     hybridClock.enableHourChangeAnimation(false);  // Disable animations to save flash
+    hybridClock.enableQuietHours(true, QUIET_HOURS_START, QUIET_HOURS_END, QUIET_HOURS_BRIGHTNESS);  // Dim LEDs 10PM-8AM
     hybridClock.setDisplayPattern(ClockDisplay::DEFAULT_COMPLEMENT);  // Simple pattern
     hybridClock.begin();
+    hybridClock.update(true);  // Force display refresh so LEDs are lit immediately after init
     Serial.println(F("HybridClock initialized successfully"));
   } else {
     Serial.println(F("Skipping HybridClock init due to earlier failure"));
   }
   
   if (initSuccess) {
-    Serial.println(F("All modules initialized successfully"));
-    displayManager.showStartupMessage();
-    // lightingEffects.showStartupSequence();  // DEPRECATED - NeoPixel removed
-    
-    delay(2000); // Show startup message
-    
     // Read sensors once at startup to initialize data
     if (sensors.readSensors()) {
+      // Seed historical data with current values so trend-based alerts start
+      // from a zero-delta baseline, preventing false alerts on startup.
+      dataLogger.seedCurrentData(sensors.getCurrentData());
+
       // Sensor initialization successful - now play startup chime with current hour
       DateTime currentTime = sensors.getCurrentTime();
       uint8_t currentHour = currentTime.getHour();
@@ -155,7 +163,7 @@ void setup() {
     displayManager.setMode(currentDisplayMode);
   } else {
     Serial.println(F("FATAL: System initialization failed"));
-    displayManager.showError("INIT");
+    displayManager.showInitFailure(initFailCauses);
     // lightingEffects.showErrorPattern();  // DEPRECATED - NeoPixel removed
     while(1) delay(1000); // Halt system
   }

@@ -86,6 +86,7 @@ public:
   bool checkRapidChange();
   
   // Data management
+  void seedCurrentData(const SensorData& data);  // Seed all history with current values to prevent false alerts on startup
   void clearAllData();
   bool isDataValid();
   uint8_t getDataAge();  // Hours since oldest data

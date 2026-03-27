@@ -19,6 +19,13 @@ void float_to_fixed(float value, char *buffer, const char *pattern, byte decimal
   }
 }
 
+// Returns 0=Sunday, 1=Monday, ..., 6=Saturday using Sakamoto's algorithm
+static uint8_t calcDayOfWeek(int year, int month, int day) {
+  static const int t[] = {0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4};
+  if (month < 3) year--;
+  return (year + year/4 - year/100 + year/400 + t[month-1] + day) % 7;
+}
+
 bool DisplayManager::init() {
   // Initialize single display group managing all 3 displays
   // Different brightness levels needed due to LED color variations
@@ -273,51 +280,84 @@ void DisplayManager::displayRollingCurrent(SensorData data) {
     rollingIndex = (rollingIndex + 1) % 5;
   }
   
-  char buffer1[10], buffer2[10], buffer3[10];
+  char displayText[20];
   
   switch (rollingIndex) {
-    case 0: // Time and actual temperature
-      formatTime(data.currentTime, buffer1);
-      if(data.temperatureF < 100.0){
-        float_to_fixed(data.temperatureF, buffer2, "%2d.%1d");
-      } else {
-        float_to_fixed(data.temperatureF, buffer2, "%3d");
+    case 0: // Time (green), Date (amber), Day of week (red)
+      {
+        static const char* dayNames[] = {"SUN","MON","TUE","WED","THU","FRI","SAT"};
+        int hour = data.currentTime.getHour();
+        if (hour == 0) hour = 12;
+        if (hour > 12) hour -= 12;
+        int month = data.currentTime.getMonth();
+        int day   = data.currentTime.getDay();
+        int dow   = calcDayOfWeek(data.currentTime.getYear(), month, day);
+        char timeStr[5];
+        if (hour < 10)
+          sprintf(timeStr, " %d%02d", hour, data.currentTime.getMinute());
+        else
+          sprintf(timeStr, "%d%02d", hour, data.currentTime.getMinute());
+        // timeStr(4 pos) + "MM.DD"(4 pos, decimal on month) + " DOW"(4 pos)
+        sprintf(displayText, "%s%02d.%02d %s", timeStr, month, day, dayNames[dow]);
       }
-      strcpy(buffer3, "TEMP");
       break;
-      
-    case 1: // Date and feels-like temperature
-      formatDate(data.currentTime, buffer1);
-      if(data.feelsLikeF < 100.0){
-        float_to_fixed(data.feelsLikeF, buffer2, "%2d.%1d");
-      } else {
-        float_to_fixed(data.feelsLikeF, buffer2, "%3d");
+
+    case 1: // Feels-like word (colour group varies) and feels-like temperature
+      {
+        const char* word = data.tempWord;
+        int fi = (int)(data.feelsLikeF * 10.0f + 0.5f);
+        int fw = fi / 10;  // whole part
+        int fd = fi % 10;  // decimal part
+        bool wordInGreen = (strcmp(word, "NICE") == 0 || strcmp(word, "WARM") == 0);
+        bool wordInAmber = (strcmp(word, "COOL") == 0 || strcmp(word, "COZY") == 0);
+        // All other words (FROZ, COLD, CHLY, TOSY, HOT, SCOR) go in red
+        if (wordInGreen) {
+          // Word in green (0-3), blank amber (4-7), temp in red (8-11)
+          if (fw < 100)
+            sprintf(displayText, "%-4s     %2d.%1d", word, fw, fd);
+          else
+            sprintf(displayText, "%-4s    %4d", word, fw);
+        } else if (wordInAmber) {
+          // Temp in green (0-3), word in amber (4-7), blank red (8-11)
+          if (fw < 100)
+            sprintf(displayText, " %2d.%1d%-4s    ", fw, fd, word);
+          else
+            sprintf(displayText, "%4d%-4s    ", fw, word);
+        } else {
+          // Temp in green (0-3), blank amber (4-7), word in red (8-11)
+          if (fw < 100)
+            sprintf(displayText, " %2d.%1d    %-4s", fw, fd, word);
+          else
+            sprintf(displayText, "%4d    %-4s", fw, word);
+        }
       }
-      strcpy(buffer3, "FEEL");
       break;
-      
-    case 2: // Temperature word and humidity
-      strcpy(buffer1, data.tempWord);
-      sprintf(buffer2, "%3d%%", (int)data.humidity);
-      strcpy(buffer3, "HUM ");
+
+    case 2: // Real temperature (green), blank (amber), humidity (red)
+      {
+        int ti = (int)(data.temperatureF * 10.0f + 0.5f);
+        int tw = ti / 10;
+        int td = ti % 10;
+        if (tw < 100)
+          sprintf(displayText, " %2d.%1d    %3d%%", tw, td, (int)(data.humidity + 0.5f));
+        else
+          sprintf(displayText, "%4d    %3d%%", tw, (int)(data.humidity + 0.5f));
+      }
       break;
-      
-    case 3: // Pressure
-      sprintf(buffer1, "%4d", (int)data.pressure);
-      strcpy(buffer2, "PRES");
-      strcpy(buffer3, "HPA ");
+
+    case 3: // "Pres" (green), pressure in mb (amber), pressure in inHg (red)
+      {
+        int mb = (int)(data.pressure + 0.5f);
+        // Convert mb to inHg: 1 mb = 0.02953 inHg; work in hundredths to avoid floats
+        int inHg_cents = (int)(data.pressure * 2.953f + 0.5f);
+        sprintf(displayText, "Pres%4d%2d.%02d", mb, inHg_cents / 100, inHg_cents % 100);
+      }
       break;
-      
-    case 4: // Light level
-      float_to_fixed(data.lightLevel, buffer1, "%4d", 0);
-      strcpy(buffer2, "LITE");
-      strcpy(buffer3, "LUX ");
+
+    case 4: // "Lux " (green), light level right-justified across amber+red (8 positions)
+      sprintf(displayText, "Lux %8d", (int)(data.lightLevel + 0.5f));
       break;
   }
-  
-  // Combine into single 12-character string for unified display
-  char displayText[20];
-  sprintf(displayText, "%4s%4s%4s", buffer1, buffer2, buffer3);
   
   displayString(displayText);
 }
@@ -501,6 +541,13 @@ void DisplayManager::showError(const char* errorCode) {
   char errorText[13];
   sprintf(errorText, "ERR %-4s FAIL", errorCode);
   displayString(errorText);
+}
+
+void DisplayManager::showInitFailure(const char* causes) {
+  // Format: "F " (2 chars) + up to 10 chars of cause info = 12 chars total
+  char text[13];
+  snprintf(text, sizeof(text), "F %-10s", causes);
+  displayString(text);
 }
 
 void DisplayManager::showSetting(SettingItem setting, int value) {

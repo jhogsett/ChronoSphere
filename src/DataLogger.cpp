@@ -257,6 +257,26 @@ void DataLogger::loadFromEEPROM() {
   if (currentDailyIndex >= MAX_DAILY_RECORDS) currentDailyIndex = 0;
 }
 
+void DataLogger::seedCurrentData(const SensorData& data) {
+  // Fill all hourly records with the current sensor values so that trend
+  // calculations start from a zero-delta baseline, preventing false alerts.
+  HourlyRecord seed;
+  seed.timestamp = data.currentTime;
+  seed.avgTemperature = data.temperatureF;
+  seed.avgHumidity = data.humidity;
+  seed.avgPressure = data.pressure;
+  seed.minTemperature = data.temperatureF;
+  seed.maxTemperature = data.temperatureF;
+  seed.minPressure = data.pressure;
+  seed.maxPressure = data.pressure;
+
+  for (uint8_t i = 0; i < MAX_HOURLY_RECORDS; i++) {
+    hourlyData[i] = seed;
+  }
+  currentHourlyIndex = 0;
+  currentSampleIndex = 0;
+}
+
 void DataLogger::clearAllData() {
   memset(hourlyData, 0, sizeof(hourlyData));
   memset(dailyData, 0, sizeof(dailyData));

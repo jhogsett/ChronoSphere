@@ -138,7 +138,18 @@ void Clock::enableQuietHours(bool enable, int start, int end, int percent) {
     }
 }
 
-void Clock::update() {
+void Clock::update(bool force) {
+    // Force mode: skip the RTC tick check and just redraw the display.
+    // Used immediately after begin() to ensure LEDs are lit without waiting
+    // for the next RTC second tick.
+    if (force) {
+        if (quietHoursEnabled) {
+            updateQuietHoursBrightness();
+        }
+        updateDisplay();
+        return;
+    }
+
     // Update time from RTC
     if (!clockTime.update()) {
         // Second hasn't changed, nothing to do
