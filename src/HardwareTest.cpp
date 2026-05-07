@@ -1,7 +1,6 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <Stepper.h>
-#include <Servo.h>
 #include "Config.h"
 #include "Sensors.h"
 #include "DisplayManager.h"
@@ -9,6 +8,17 @@
 #include "MotorControl.h"
 #include "AudioManager.h"
 #include "LightingEffects.h"
+#include <HybridClock.h>
+
+// Device-specific calibration (keep in sync with main.cpp)
+#define CHRONOSPHERE_DEVICE1
+// #define CHRONOSPHERE_DEVICE2
+
+#if defined(CHRONOSPHERE_DEVICE1)
+  #define CENTERING_ADJUSTMENT 9
+#elif defined(CHRONOSPHERE_DEVICE2)
+  #define CENTERING_ADJUSTMENT 1
+#endif
 
 // Test objects
 Sensors testSensors;
@@ -17,6 +27,20 @@ UserInput testUserInput;
 MotorControl testMotorControl;
 AudioManager testAudioManager;
 LightingEffects testLightingEffects;
+
+Clock testClock(
+    CLOCK_STEPS_PER_REV,
+    CLOCK_STEPPER_PIN1,
+    CLOCK_SENSOR_PIN,
+    CLOCK_NEOPIXEL_PIN,
+    CLOCK_HOUR_LEDS,
+    CLOCK_MINUTE_LEDS,
+    CLOCK_BRIGHTNESS,
+    CLOCK_MOTOR_SPEED,
+    0,
+    false
+);
+bool testClockInitialized = false;
 
 // Test data structure
 SensorData testData;
@@ -31,8 +55,8 @@ void testLightSensor();
 void testPressureSensor();
 void testLEDStrip();
 void testStepperMotor();
-void testServoMotor();
 void testWeatherSummary();
+void testMinuteHandPosition();
 void runInteractiveMenu();
 void printTestHeader(const char* testName);
 void waitForUserInput();
@@ -78,12 +102,12 @@ void runInteractiveMenu() {
     Serial.println(F("7. Test LED Strip (NeoPixel)"));
     Serial.println(F("8. Test Audio Module (VS1053)"));
     Serial.println(F("9. Test Stepper Motor"));
-    Serial.println(F("S. Test Servo Motor"));
+    Serial.println(F("M. Test Minute Hand Position (HybridClock)"));
     Serial.println(F("W. Test Weather Summary (Multi-Sensor)"));
     Serial.println(F("A. Test All Devices (Sequential)"));
     Serial.println(F("0. Exit Test Suite"));
     Serial.println(F("==========================================="));
-    Serial.print(F("Enter test number (0-9, S, W, A): "));
+    Serial.print(F("Enter test number (0-9, M, W, A): "));
     
     // Wait for user input
     while (!Serial.available()) {
@@ -126,13 +150,13 @@ void runInteractiveMenu() {
       case '9':
         testStepperMotor();
         break;
-      case 'S':
-      case 's':
-        testServoMotor();
-        break;
       case 'W':
       case 'w':
         testWeatherSummary();
+        break;
+      case 'M':
+      case 'm':
+        testMinuteHandPosition();
         break;
       case 'A':
       case 'a':
@@ -146,7 +170,6 @@ void runInteractiveMenu() {
         testLEDStrip();
         testAudioModule();
         testStepperMotor();
-        testServoMotor();
         testWeatherSummary();
         break;
       case '0':
@@ -811,7 +834,7 @@ void testStepperMotor() {
   
   // Create stepper object (steps per revolution, pin1, pin2, pin3, pin4)
   // 28BYJ-48 has 2048 steps per full revolution in half-step mode
-  Stepper stepper(2048, STEPPER_PIN1, STEPPER_PIN3, STEPPER_PIN2, STEPPER_PIN4);
+  Stepper stepper(2048, CLOCK_STEPPER_PIN1, CLOCK_STEPPER_PIN3, CLOCK_STEPPER_PIN2, CLOCK_STEPPER_PIN4);
   
   // Set speed in RPM (revolutions per minute)
   stepper.setSpeed(10); // 10 RPM for smooth operation
@@ -856,79 +879,46 @@ void testStepperMotor() {
   waitForUserInput();
 }
 
-void testServoMotor() {
-  printTestHeader("SERVO MOTOR TEST");
-  
-  Serial.println(F("Initializing servo motor..."));
-  Serial.println(F("Using standard 180° servo on pin 5"));
-  
-  Servo testServo;
-  testServo.attach(SERVO_PIN);
-  
-  Serial.println(F("✓ Servo motor initialized"));
-  
-  Serial.println(F("\nTesting servo motor movement..."));
-  Serial.println(F("You should see the servo horn moving to different positions"));
-  
-  // Test 1: Move to center position
-  Serial.println(F("Test 1: Moving to center position (90°)"));
-  testServo.write(90);
-  delay(1000);
-  
-  // Test 2: Sweep from 0 to 180 degrees
-  Serial.println(F("Test 2: Sweeping from 0° to 180°"));
-  for (int pos = 0; pos <= 180; pos += 10) {
-    testServo.write(pos);
-    Serial.print(F("Position: "));
-    Serial.print(pos);
-    Serial.println(F("°"));
-    delay(200);
+void testMinuteHandPosition() {
+  printTestHeader("MINUTE HAND POSITION TEST");
+
+  if (!testClockInitialized) {
+    Serial.println(F("Calibrating clock motor (homing hand to 0)..."));
+    testClock.setCenteringAdjustment(CENTERING_ADJUSTMENT);
+    testClock.begin();
+    testClockInitialized = true;
+    Serial.println(F("\u2713 Calibration complete - hand is at minute 0"));
+  } else {
+    Serial.println(F("Clock already calibrated, reusing current position."));
   }
-  
-  delay(500);
-  
-  // Test 3: Sweep from 180 to 0 degrees
-  Serial.println(F("Test 3: Sweeping from 180° to 0°"));
-  for (int pos = 180; pos >= 0; pos -= 10) {
-    testServo.write(pos);
-    Serial.print(F("Position: "));
-    Serial.print(pos);
-    Serial.println(F("°"));
-    delay(200);
+
+  Serial.println(F("Enter a minute (0-59) and press ENTER to move the hand."));
+  Serial.println(F("Enter 'X' to exit this test."));
+
+  while (true) {
+    Serial.print(F("Minute (0-59) or X to exit: "));
+    while (!Serial.available()) { delay(100); }
+
+    String input = Serial.readStringUntil('\n');
+    input.trim();
+    Serial.println(input);
+
+    if (input.equalsIgnoreCase("X")) {
+      break;
+    }
+
+    int minute = input.toInt();
+    if (minute < 0 || minute > 59) {
+      Serial.println(F("Invalid value. Please enter 0-59."));
+      continue;
+    }
+
+    Serial.print(F("Moving hand to minute "));
+    Serial.println(minute);
+    testClock.getMotor().moveToMinute(minute);
+    Serial.println(F("Done. Verify hand position visually."));
   }
-  
-  delay(500);
-  
-  // Test 4: Specific positions
-  Serial.println(F("Test 4: Moving to specific positions"));
-  int positions[] = {0, 45, 90, 135, 180, 90};
-  int numPositions = sizeof(positions) / sizeof(positions[0]);
-  
-  for (int i = 0; i < numPositions; i++) {
-    Serial.print(F("Moving to "));
-    Serial.print(positions[i]);
-    Serial.println(F("°"));
-    testServo.write(positions[i]);
-    delay(1000);
-  }
-  
-  // Test 5: Rapid movement test
-  Serial.println(F("Test 5: Rapid movement test"));
-  for (int i = 0; i < 5; i++) {
-    testServo.write(0);
-    delay(300);
-    testServo.write(180);
-    delay(300);
-  }
-  
-  // Return to center
-  Serial.println(F("Returning to center position"));
-  testServo.write(90);
-  delay(500);
-  
-  testServo.detach();
-  
-  Serial.println(F("✓ Servo motor test completed"));
-  Serial.println(F("Note: Servo should have moved smoothly to all positions"));
+
+  Serial.println(F("\u2713 Minute hand position test complete."));
   waitForUserInput();
 }

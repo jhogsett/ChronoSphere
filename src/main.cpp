@@ -20,8 +20,8 @@ DataLogger dataLogger;
 LightingEffects lightingEffects;
 
 // Device-specific calibration
-// #define CHRONOSPHERE_DEVICE1
-#define CHRONOSPHERE_DEVICE2
+#define CHRONOSPHERE_DEVICE1
+// #define CHRONOSPHERE_DEVICE2
 
 #if defined(CHRONOSPHERE_DEVICE1)
   #define CENTERING_ADJUSTMENT 9
@@ -341,6 +341,7 @@ void handleUserInput() {
         displayManager.setMode(currentDisplayMode);
       }
     }
+    displayManager.forceNextUpdate();  // Bypass 1-second interval for immediate feedback
   }
 }
 

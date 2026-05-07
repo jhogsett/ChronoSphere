@@ -2,8 +2,8 @@
 #define CONFIG_H
 
 // Pin Definitions
-#define ROTARY_CLK_PIN 2
-#define ROTARY_DT_PIN 3
+#define ROTARY_CLK_PIN 3 // 2 before
+#define ROTARY_DT_PIN 2 // 3 before
 #define ROTARY_SW_PIN 4
 
 // HybridClock Pin Definitions (analog clock mechanism)
@@ -100,13 +100,13 @@ enum MidiInstrument {
 
 // Display Modes
 enum DisplayMode {
-  MODE_CLOCK = 0,
+  MODE_ROLLING_CURRENT = 0,
+  MODE_SETTINGS,
+  MODE_CLOCK,
   MODE_TEMPERATURE,
   MODE_WEATHER_SUMMARY,
-  MODE_ROLLING_CURRENT,
   MODE_ROLLING_HISTORICAL,
-  MODE_ROLLING_TRENDS,
-  MODE_SETTINGS
+  MODE_ROLLING_TRENDS
 };
 
 // Settings Menu Items

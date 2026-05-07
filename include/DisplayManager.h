@@ -22,10 +22,11 @@ private:
   void clearAllDisplays();
   void displayString(const char* text);
   void displayScrollingString(const char* text, int showDelay = 100, int scrollDelay = 100);
-  void displayTime(DateTime time);
-  void displayDate(DateTime time);
-  void displayTemperature(SensorData data);
-  void displayWeatherSummary(SensorData data);
+  void displayPanelTimeDate(const SensorData& data);
+  void displayPanelFeelsLike(const SensorData& data);
+  void displayPanelTempHumidity(const SensorData& data);
+  void displayPanelPressure(const SensorData& data);
+  void displayPanelLight(const SensorData& data);
   void displayRollingCurrent(SensorData data);
   void displayRollingHistorical();
   void displayRollingTrends();
@@ -48,6 +49,7 @@ public:
   void setMode(DisplayMode mode);
   DisplayMode getCurrentMode();
   bool isTimeToUpdate();
+  void forceNextUpdate();
   
   // Display methods
   void displayTimeOnly(DateTime time);
