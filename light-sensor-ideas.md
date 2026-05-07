@@ -1,5 +1,12 @@
 # Light Sensor Enhancement Ideas
 
+## Questions / Notes
+- Does the hybrid clock library include the ability to set arbitrary brightness level?
+- The setting of brightness has some criticality: if the background patttern is too dim, the color transitions as the color changes snap between primary color values rather than transitioning smoothly. Also, if too bright compared to the white HOUR lit-up LEDs, it makes seeing the hour harder due to the lack of contrast
+- Suggested implementation: have standard daytime and quite time brightness levels that maintain the smoothness of color transitions and contrast with the HOUR LEDs.
+- The Hybrid clock looks good with these brightness values, default: 63% quite time: 50%
+
+
 ## Current Usage (BH1750)
 
 - Read every 30 seconds into `SensorData.lightLevel` (lux)
