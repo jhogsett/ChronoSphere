@@ -67,15 +67,23 @@ void DisplayManager::update(SensorData sensorData) {
   
   switch (currentMode) {
     case MODE_CLOCK:
-      displayTime(sensorData.currentTime);
+      displayPanelTimeDate(sensorData);
+      break;
+      
+    case MODE_FEELS_LIKE:
+      displayPanelFeelsLike(sensorData);
       break;
       
     case MODE_TEMPERATURE:
-      displayTemperature(sensorData);
+      displayPanelTempHumidity(sensorData);
       break;
       
     case MODE_WEATHER_SUMMARY:
-      displayWeatherSummary(sensorData);
+      displayPanelPressure(sensorData);
+      break;
+      
+    case MODE_LIGHT:
+      displayPanelLight(sensorData);
       break;
       
     case MODE_ROLLING_CURRENT:
@@ -141,29 +149,21 @@ void DisplayManager::displayScrollingString(const char* text, int showDelay, int
   displayGroup->scroll_string(text, showDelay, scrollDelay);
 }
 
-void DisplayManager::displayTime(DateTime time) {
+void DisplayManager::displayPanelTimeDate(SensorData data) {
+  static const char* dayNames[] = {"SUN","MON","TUE","WED","THU","FRI","SAT"};
   char displayText[13];
-  
-  // Format time: 4 digits with leading space instead of zero (positions 0-3)
-  int hour = time.getHour();
+  int hour = data.currentTime.getHour();
   if (hour == 0) hour = 12;
   if (hour > 12) hour -= 12;
-  
-  // Format date: month in positions 6-7, day in positions 9-10
-  int month = time.getMonth();
-  int day = time.getDay();
-  
-  // Create 12-character string: "HHMM  MM DD  "
-  //                            0123456789AB
-  if (hour < 10) {
-    sprintf(displayText, " %d%02d  %2d %02d  ", hour, time.getMinute(), month, day);
-  } else {
-    sprintf(displayText, "%d%02d  %2d %02d  ", hour, time.getMinute(), month, day);
-  }
-  
-  // Serial.print(F("Clock display: "));
-  // Serial.println(displayText);
-  
+  int month = data.currentTime.getMonth();
+  int day   = data.currentTime.getDay();
+  int dow   = calcDayOfWeek(data.currentTime.getYear(), month, day);
+  char timeStr[5];
+  if (hour < 10)
+    sprintf(timeStr, " %d%02d", hour, data.currentTime.getMinute());
+  else
+    sprintf(timeStr, "%d%02d", hour, data.currentTime.getMinute());
+  sprintf(displayText, "%s%02d.%02d %s", timeStr, month, day, dayNames[dow]);
   displayString(displayText);
 }
 
@@ -216,62 +216,63 @@ void DisplayManager::formatDate(DateTime time, char* buffer) {
   sprintf(buffer, "%02d/%02d", time.getMonth(), time.getDay());
 }
 
-void DisplayManager::displayTemperature(SensorData data) {
+void DisplayManager::displayPanelFeelsLike(SensorData data) {
   char displayText[13];
-  char tempStr[5];   // For temperature string like "75.0" 
-  char feelsStr[5];  // For feels like string like "78.0"
-  
-  // Create 12-character string with 4-char segments: "TTTT FFFF WWWW"
-  // Characters 0-3 (GREEN): Temperature (e.g. "75.0")  
-  // Characters 4-7 (AMBER): Feels like (e.g. "78.0")
-  // Characters 8-11 (RED): Temperature word (e.g. "WARM")
-  
-  // Format temperature using float_to_fixed like in reference code
-  if(data.temperatureF < 100.0){
-    float_to_fixed(data.temperatureF, tempStr, "%2d.%1d");
+  const char* word = data.tempWord;
+  int fi = (int)(data.feelsLikeF * 10.0f + 0.5f);
+  int fw = fi / 10;
+  int fd = fi % 10;
+  bool wordInGreen = (strcmp(word, "NICE") == 0 || strcmp(word, "WARM") == 0);
+  bool wordInAmber = (strcmp(word, "COOL") == 0 || strcmp(word, "COZY") == 0);
+  if (wordInGreen) {
+    if (fw < 100)
+      sprintf(displayText, "%-4s     %2d.%1d", word, fw, fd);
+    else
+      sprintf(displayText, "%-4s    %4d", word, fw);
+  } else if (wordInAmber) {
+    if (fw < 100)
+      sprintf(displayText, " %2d.%1d%-4s    ", fw, fd, word);
+    else
+      sprintf(displayText, "%4d%-4s    ", fw, word);
   } else {
-    float_to_fixed(data.temperatureF, tempStr, "%3d");  // No decimal for 100+
+    if (fw < 100)
+      sprintf(displayText, " %2d.%1d    %-4s", fw, fd, word);
+    else
+      sprintf(displayText, "%4d    %-4s", fw, word);
   }
-  
-  // Format feels like temperature  
-  if(data.feelsLikeF < 100.0){
-    float_to_fixed(data.feelsLikeF, feelsStr, "%2d.%1d");
-  } else {
-    float_to_fixed(data.feelsLikeF, feelsStr, "%3d");  // No decimal for 100+
-  }
-  
-  // Combine into 12-character display string
-  sprintf(displayText, "%4s %4s%-4s", tempStr, feelsStr, data.tempWord);
-  
   displayString(displayText);
 }
 
-void DisplayManager::displayWeatherSummary(SensorData data) {
+void DisplayManager::displayPanelTempHumidity(SensorData data) {
   char displayText[13];
-  char tempStr[5];     // For temperature like "79.0"
-  char humidStr[5];    // For humidity like "45.0"
-  char pressStr[5];    // For pressure like "1013"
-  
-  // Create 12-character string: "TTTT HHHH PPPP"
-  // Characters 0-3 (GREEN): Temperature (e.g. "79.0")
-  // Characters 4-7 (AMBER): Humidity (e.g. "45.0")
-  // Characters 8-11 (RED): Pressure (e.g. "1013")
-  
-  // Format temperature 
-  if(data.temperatureF < 100.0){
-    float_to_fixed(data.temperatureF, tempStr, "%2d.%1d");
-  } else {
-    float_to_fixed(data.temperatureF, tempStr, "%3d");
-  }
-  
-  // Format humidity (usually no decimals needed for humidity)
-  sprintf(humidStr, "%3d%%", (int)data.humidity);
-  
-  // Format pressure as integer (avoid float formatting issues)
-  sprintf(pressStr, "%4d", (int)data.pressure);
-  
-  sprintf(displayText, "%4s%4s%4s", tempStr, humidStr, pressStr);
-  
+  int ti = (int)(data.temperatureF * 10.0f + 0.5f);
+  int tw = ti / 10;
+  int td = ti % 10;
+  float tempC = (data.temperatureF - 32.0f) * 5.0f / 9.0f;
+  bool cNeg = (tempC < 0);
+  int ci = (int)((cNeg ? -tempC : tempC) * 10.0f + 0.5f);
+  int cw = ci / 10;
+  int cd = ci % 10;
+  char celStr[6];
+  sprintf(celStr, cNeg ? "-%2d.%d" : " %2d.%d", cw, cd);
+  if (tw < 100)
+    sprintf(displayText, " %2d.%1d%s%3d%%", tw, td, celStr, (int)(data.humidity + 0.5f));
+  else
+    sprintf(displayText, "%4d%s%3d%%", tw, celStr, (int)(data.humidity + 0.5f));
+  displayString(displayText);
+}
+
+void DisplayManager::displayPanelPressure(SensorData data) {
+  char displayText[13];
+  int mb = (int)(data.pressure + 0.5f);
+  int inHg_cents = (int)(data.pressure * 2.953f + 0.5f);
+  sprintf(displayText, "Pres%4d%2d.%02d", mb, inHg_cents / 100, inHg_cents % 100);
+  displayString(displayText);
+}
+
+void DisplayManager::displayPanelLight(SensorData data) {
+  char displayText[13];
+  sprintf(displayText, "Lux %8d", (int)(data.lightLevel + 0.5f));
   displayString(displayText);
 }
 
@@ -284,95 +285,13 @@ void DisplayManager::displayRollingCurrent(SensorData data) {
     rollingIndex = (rollingIndex + 1) % 5;
   }
   
-  char displayText[20];
-  
   switch (rollingIndex) {
-    case 0: // Time (green), Date (amber), Day of week (red)
-      {
-        static const char* dayNames[] = {"SUN","MON","TUE","WED","THU","FRI","SAT"};
-        int hour = data.currentTime.getHour();
-        if (hour == 0) hour = 12;
-        if (hour > 12) hour -= 12;
-        int month = data.currentTime.getMonth();
-        int day   = data.currentTime.getDay();
-        int dow   = calcDayOfWeek(data.currentTime.getYear(), month, day);
-        char timeStr[5];
-        if (hour < 10)
-          sprintf(timeStr, " %d%02d", hour, data.currentTime.getMinute());
-        else
-          sprintf(timeStr, "%d%02d", hour, data.currentTime.getMinute());
-        // timeStr(4 pos) + "MM.DD"(4 pos, decimal on month) + " DOW"(4 pos)
-        sprintf(displayText, "%s%02d.%02d %s", timeStr, month, day, dayNames[dow]);
-      }
-      break;
-
-    case 1: // Feels-like word (colour group varies) and feels-like temperature
-      {
-        const char* word = data.tempWord;
-        int fi = (int)(data.feelsLikeF * 10.0f + 0.5f);
-        int fw = fi / 10;  // whole part
-        int fd = fi % 10;  // decimal part
-        bool wordInGreen = (strcmp(word, "NICE") == 0 || strcmp(word, "WARM") == 0);
-        bool wordInAmber = (strcmp(word, "COOL") == 0 || strcmp(word, "COZY") == 0);
-        // All other words (FROZ, COLD, CHLY, TOSY, HOT, SCOR) go in red
-        if (wordInGreen) {
-          // Word in green (0-3), blank amber (4-7), temp in red (8-11)
-          if (fw < 100)
-            sprintf(displayText, "%-4s     %2d.%1d", word, fw, fd);
-          else
-            sprintf(displayText, "%-4s    %4d", word, fw);
-        } else if (wordInAmber) {
-          // Temp in green (0-3), word in amber (4-7), blank red (8-11)
-          if (fw < 100)
-            sprintf(displayText, " %2d.%1d%-4s    ", fw, fd, word);
-          else
-            sprintf(displayText, "%4d%-4s    ", fw, word);
-        } else {
-          // Temp in green (0-3), blank amber (4-7), word in red (8-11)
-          if (fw < 100)
-            sprintf(displayText, " %2d.%1d    %-4s", fw, fd, word);
-          else
-            sprintf(displayText, "%4d    %-4s", fw, word);
-        }
-      }
-      break;
-
-    case 2: // Real temperature °F (green), temperature °C (amber), humidity (red)
-      {
-        int ti = (int)(data.temperatureF * 10.0f + 0.5f);
-        int tw = ti / 10;
-        int td = ti % 10;
-
-        float tempC = (data.temperatureF - 32.0f) * 5.0f / 9.0f;
-        bool cNeg = (tempC < 0);
-        int ci = (int)((cNeg ? -tempC : tempC) * 10.0f + 0.5f);
-        int cw = ci / 10;
-        int cd = ci % 10;
-        char celStr[6];
-        sprintf(celStr, cNeg ? "-%2d.%d" : " %2d.%d", cw, cd);
-
-        if (tw < 100)
-          sprintf(displayText, " %2d.%1d%s%3d%%", tw, td, celStr, (int)(data.humidity + 0.5f));
-        else
-          sprintf(displayText, "%4d%s%3d%%", tw, celStr, (int)(data.humidity + 0.5f));
-      }
-      break;
-
-    case 3: // "Pres" (green), pressure in mb (amber), pressure in inHg (red)
-      {
-        int mb = (int)(data.pressure + 0.5f);
-        // Convert mb to inHg: 1 mb = 0.02953 inHg; work in hundredths to avoid floats
-        int inHg_cents = (int)(data.pressure * 2.953f + 0.5f);
-        sprintf(displayText, "Pres%4d%2d.%02d", mb, inHg_cents / 100, inHg_cents % 100);
-      }
-      break;
-
-    case 4: // "Lux " (green), light level right-justified across amber+red (8 positions)
-      sprintf(displayText, "Lux %8d", (int)(data.lightLevel + 0.5f));
-      break;
+    case 0: displayPanelTimeDate(data);     break;
+    case 1: displayPanelFeelsLike(data);    break;
+    case 2: displayPanelTempHumidity(data); break;
+    case 3: displayPanelPressure(data);     break;
+    case 4: displayPanelLight(data);        break;
   }
-  
-  displayString(displayText);
 }
 
 void DisplayManager::displayRollingHistorical() {
