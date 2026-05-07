@@ -192,7 +192,7 @@ void DisplayManager::formatDate(DateTime time, char* buffer) {
 
 void DisplayManager::displayPanelTimeDate(const SensorData& data) {
   static const char* dayNames[] = {"SUN","MON","TUE","WED","THU","FRI","SAT"};
-  char displayText[13];
+  char displayText[20];
   int hour = data.currentTime.getHour();
   if (hour == 0) hour = 12;
   if (hour > 12) hour -= 12;
@@ -209,7 +209,7 @@ void DisplayManager::displayPanelTimeDate(const SensorData& data) {
 }
 
 void DisplayManager::displayPanelFeelsLike(const SensorData& data) {
-  char displayText[13];
+  char displayText[20];
   const char* word = data.tempWord;
   int fi = (int)(data.feelsLikeF * 10.0f + 0.5f);
   int fw = fi / 10;
@@ -236,7 +236,7 @@ void DisplayManager::displayPanelFeelsLike(const SensorData& data) {
 }
 
 void DisplayManager::displayPanelTempHumidity(const SensorData& data) {
-  char displayText[13];
+  char displayText[20];
   int ti = (int)(data.temperatureF * 10.0f + 0.5f);
   int tw = ti / 10;
   int td = ti % 10;
@@ -255,7 +255,7 @@ void DisplayManager::displayPanelTempHumidity(const SensorData& data) {
 }
 
 void DisplayManager::displayPanelPressure(const SensorData& data) {
-  char displayText[13];
+  char displayText[20];
   int mb = (int)(data.pressure + 0.5f);
   int inHg_cents = (int)(data.pressure * 2.953f + 0.5f);
   sprintf(displayText, "Pres%4d%2d.%02d", mb, inHg_cents / 100, inHg_cents % 100);
@@ -263,7 +263,7 @@ void DisplayManager::displayPanelPressure(const SensorData& data) {
 }
 
 void DisplayManager::displayPanelLight(const SensorData& data) {
-  char displayText[13];
+  char displayText[20];
   sprintf(displayText, "Lux %8d", (int)(data.lightLevel + 0.5f));
   displayString(displayText);
 }
