@@ -95,13 +95,13 @@ DisplayMode UserInput::handleModeChange(DisplayMode currentMode, int encoderDelt
   
   if (encoderDelta > 0) {
     modeInt++;
-    if (modeInt > MODE_SETTINGS) {
-      modeInt = MODE_CLOCK;
+    if (modeInt > MODE_ROLLING_TRENDS) {
+      modeInt = MODE_ROLLING_CURRENT;
     }
   } else {
     modeInt--;
-    if (modeInt < MODE_CLOCK) {
-      modeInt = MODE_SETTINGS;
+    if (modeInt < MODE_ROLLING_CURRENT) {
+      modeInt = MODE_ROLLING_TRENDS;
     }
   }
   
