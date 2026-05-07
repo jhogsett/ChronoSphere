@@ -337,15 +337,24 @@ void DisplayManager::displayRollingCurrent(SensorData data) {
       }
       break;
 
-    case 2: // Real temperature (green), blank (amber), humidity (red)
+    case 2: // Real temperature °F (green), temperature °C (amber), humidity (red)
       {
         int ti = (int)(data.temperatureF * 10.0f + 0.5f);
         int tw = ti / 10;
         int td = ti % 10;
+
+        float tempC = (data.temperatureF - 32.0f) * 5.0f / 9.0f;
+        bool cNeg = (tempC < 0);
+        int ci = (int)((cNeg ? -tempC : tempC) * 10.0f + 0.5f);
+        int cw = ci / 10;
+        int cd = ci % 10;
+        char celStr[6];
+        sprintf(celStr, cNeg ? "-%2d.%d" : " %2d.%d", cw, cd);
+
         if (tw < 100)
-          sprintf(displayText, " %2d.%1d    %3d%%", tw, td, (int)(data.humidity + 0.5f));
+          sprintf(displayText, " %2d.%1d%s%3d%%", tw, td, celStr, (int)(data.humidity + 0.5f));
         else
-          sprintf(displayText, "%4d    %3d%%", tw, (int)(data.humidity + 0.5f));
+          sprintf(displayText, "%4d%s%3d%%", tw, celStr, (int)(data.humidity + 0.5f));
       }
       break;
 
