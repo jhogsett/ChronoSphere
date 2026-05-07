@@ -67,15 +67,15 @@ void DisplayManager::update(SensorData sensorData) {
   
   switch (currentMode) {
     case MODE_CLOCK:
-      displayTime(sensorData.currentTime);
+      displayPanelTimeDate(sensorData);
       break;
       
     case MODE_TEMPERATURE:
-      displayTemperature(sensorData);
+      displayPanelTempHumidity(sensorData);
       break;
       
     case MODE_WEATHER_SUMMARY:
-      displayWeatherSummary(sensorData);
+      displayPanelPressure(sensorData);
       break;
       
     case MODE_ROLLING_CURRENT:
@@ -141,32 +141,6 @@ void DisplayManager::displayScrollingString(const char* text, int showDelay, int
   displayGroup->scroll_string(text, showDelay, scrollDelay);
 }
 
-void DisplayManager::displayTime(DateTime time) {
-  char displayText[13];
-  
-  // Format time: 4 digits with leading space instead of zero (positions 0-3)
-  int hour = time.getHour();
-  if (hour == 0) hour = 12;
-  if (hour > 12) hour -= 12;
-  
-  // Format date: month in positions 6-7, day in positions 9-10
-  int month = time.getMonth();
-  int day = time.getDay();
-  
-  // Create 12-character string: "HHMM  MM DD  "
-  //                            0123456789AB
-  if (hour < 10) {
-    sprintf(displayText, " %d%02d  %2d %02d  ", hour, time.getMinute(), month, day);
-  } else {
-    sprintf(displayText, "%d%02d  %2d %02d  ", hour, time.getMinute(), month, day);
-  }
-  
-  // Serial.print(F("Clock display: "));
-  // Serial.println(displayText);
-  
-  displayString(displayText);
-}
-
 void DisplayManager::displayTimeOnly(DateTime time) {
   char displayText[13];
   
@@ -214,65 +188,6 @@ void DisplayManager::formatTime(DateTime time, char* buffer) {
 
 void DisplayManager::formatDate(DateTime time, char* buffer) {
   sprintf(buffer, "%02d/%02d", time.getMonth(), time.getDay());
-}
-
-void DisplayManager::displayTemperature(SensorData data) {
-  char displayText[13];
-  char tempStr[5];   // For temperature string like "75.0" 
-  char feelsStr[5];  // For feels like string like "78.0"
-  
-  // Create 12-character string with 4-char segments: "TTTT FFFF WWWW"
-  // Characters 0-3 (GREEN): Temperature (e.g. "75.0")  
-  // Characters 4-7 (AMBER): Feels like (e.g. "78.0")
-  // Characters 8-11 (RED): Temperature word (e.g. "WARM")
-  
-  // Format temperature using float_to_fixed like in reference code
-  if(data.temperatureF < 100.0){
-    float_to_fixed(data.temperatureF, tempStr, "%2d.%1d");
-  } else {
-    float_to_fixed(data.temperatureF, tempStr, "%3d");  // No decimal for 100+
-  }
-  
-  // Format feels like temperature  
-  if(data.feelsLikeF < 100.0){
-    float_to_fixed(data.feelsLikeF, feelsStr, "%2d.%1d");
-  } else {
-    float_to_fixed(data.feelsLikeF, feelsStr, "%3d");  // No decimal for 100+
-  }
-  
-  // Combine into 12-character display string
-  sprintf(displayText, "%4s %4s%-4s", tempStr, feelsStr, data.tempWord);
-  
-  displayString(displayText);
-}
-
-void DisplayManager::displayWeatherSummary(SensorData data) {
-  char displayText[13];
-  char tempStr[5];     // For temperature like "79.0"
-  char humidStr[5];    // For humidity like "45.0"
-  char pressStr[5];    // For pressure like "1013"
-  
-  // Create 12-character string: "TTTT HHHH PPPP"
-  // Characters 0-3 (GREEN): Temperature (e.g. "79.0")
-  // Characters 4-7 (AMBER): Humidity (e.g. "45.0")
-  // Characters 8-11 (RED): Pressure (e.g. "1013")
-  
-  // Format temperature 
-  if(data.temperatureF < 100.0){
-    float_to_fixed(data.temperatureF, tempStr, "%2d.%1d");
-  } else {
-    float_to_fixed(data.temperatureF, tempStr, "%3d");
-  }
-  
-  // Format humidity (usually no decimals needed for humidity)
-  sprintf(humidStr, "%3d%%", (int)data.humidity);
-  
-  // Format pressure as integer (avoid float formatting issues)
-  sprintf(pressStr, "%4d", (int)data.pressure);
-  
-  sprintf(displayText, "%4s%4s%4s", tempStr, humidStr, pressStr);
-  
-  displayString(displayText);
 }
 
 void DisplayManager::displayPanelTimeDate(const SensorData& data) {
